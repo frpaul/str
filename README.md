@@ -1,10 +1,11 @@
 # str
+
 Slacker Tracker
 ----------------
 
 STR is a personal teacher's tool for keeping track of students' grades and attendance.
 There are lots of programms like Moodle, big and powerfull. STR is just a simple offline programm
-to handle sqlite base with several tables.
+to handle sqlite base with several tables. A future integration with Moodle is a possibility.
 
 Features:
 
@@ -13,13 +14,14 @@ Main window:
 
 * Names of the students
 * Various statistics (attendance, avg grade, current grade)
+* Fields N (not present) and L (late) to easily check slackers
 
 Events window (Ctrl + e)
 ------------------------
 
 4 views: lections, essays, seminars, tests.
 
-User may create, change, delete or move (partly realized) topics.
+User may create (ctrl-n), change (Return), delete (ctrl + r) or move (ctrl-d - down) topics.
 This window also used to choose event to grade for.
 
 Information (Ctrl + u)
