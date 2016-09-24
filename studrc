@@ -1,6 +1,6 @@
 [Paths]
-stud_path1 = /home/frpaul/svncod/trunk/studentus/senior_2015_16.db
-stud_path2 = /home/frpaul/svncod/trunk/studentus/minor_2015_16.db
+stud_path1 = /home/user/svncod/trunk/studentus/senior_2015_16.db
+stud_path2 = /home/user/svncod/trunk/studentus/minor_2015_16.db
 [Settings]
 # 0 - long view, 1 - short view
 default_view = 1
