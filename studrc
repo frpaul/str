@@ -1,0 +1,16 @@
+[Paths]
+stud_path1 = /home/frpaul/svncod/trunk/studentus/senior_2015_16.db
+stud_path2 = /home/frpaul/svncod/trunk/studentus/minor_2015_16.db
+[Settings]
+# 0 - long view, 1 - short view
+default_view = 1
+# 1 or 2
+default_class = 1
+# 0 - weak, 1 - strong, 2 - all students
+default_c_group = 2
+start_dialog_on = 1
+essays_due_time = 14
+[Fonts]
+default_font = Tahoma 12
+
+

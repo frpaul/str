@@ -1,0 +1,160 @@
+Варианты названия:
+
+Slacker Tracker (STR - st not avail)
+Teacher's Little Helper (TLH - a pan on Simpsons' dog)
+Epistat
+Paidagogos, Paideutes
+Mastix
+Track Them All (TTA)
+NQ (no Quorter)
+
+=Главное окно.=
+
+Клик на имени студента вызывает меню для оценки (Grader)
+Ctrl + e вызывает меню событий (Events) - лекции, семинары, эссе...
+
+################ TODO: 
+
+При запуске программы должно появляться окно с темой и типом текущего события (исправляем, если не нравится дефолтная)
+Information (Urgent) см. ниже
+
+++ Ctrl + i вызывает меню с информацией о студенте под курсором. 
+Как показывать среднюю оценку студента?
+    * short view  - средняя оценка (см ниже) 
+
+* Семестры
+
++++    * Проблема1: Средняя посещаемость и успеваемость. Придумать запрос, способный отделить только события, призошедшие после конца семестра
+    * Как выделить семестры визуально?
+        * Разделитель
+        * Можно семестры выделить цветом: например, разный cell-background, или даты наверху покрасить в два разных цвета
+        * +++ Можно скрыть 1й семестр. +++ Лучшее решение для verbose view
+
+Режимы просмотра:
+    * линеарный - long_view (Просмотр всех оценок и посещаемости) Отделить семестры визуально 
+    * рабочий - short view: Статистика (посещаемость, средняя оценка), выставление посещаемости и оценки
+++        * Верхняя панель показывает текущую дату и семестр (Labels), Можно прикрутить смену даты (исправлять оценки, напр)
+++        * Основная часть: Name, stats (N-not present, L-late, Av-average grade), current (N, L, G(rade))
+++        * Ok button - записать все в базу. Изменения в основном поле пишутся в Treestore. Страховка - при выходе должно быть автосохранение. 
+          * Опасно - если батарейка сядет. Надо еще swap file
+
+=Окно "ставим оценку" Grades in Details =
+
+Ставим оценку за определенное событие. Дата события не обязательно совпадает с датой оценки.
+Напр.: Эссе (напр. e2) назначено 2 апреля, а оценка поставлена 9-го. Записывается e2, date=9_04..., mark = 4
+Получается на одну дату может приходится несколько оценок (например, устный ответ + проверенное эссе)
+
+++ в основном окне надо учесть возможность появления нескольких оценок.
+
+=Окно "все оценки"=
+
+TODO: Вывести все оценки. По дефолту сортируем по студенту.
+Можно сортировать по: студенту, событию, дате
+
+=События=
+Костыль, переделать:
+Ввод в нижнем поле информации о новом событии:
+t/Тема события/комментарий?
+c/Тема события/комментарий?
+23-06-2016/Тема события...
+
+TODO: После нажатия Enter надо очищать Entry от уже введенной инфы, чтобы было понятно, что запись произведена
+Починить reloader, чтобы еще и в главном меню глюки не появлялись.
+
+TODO:
+Клик на событии... выводятся полученные оценки всех студентов комментарии,
+Ctrl-e окно с темой события под курсором (возможность исправления) - см. меню при запуске программы.
+
+=Посещаемость=
+
+Добавил возможность оценки посещаемости в short view (чекбоксы)
+Плюс Grader (добавить поле посещаемости).
+
+=Импорт событий=
+
+Для генерации общего списка событий надо подготовить файлы:
+topics_new  - новый набор тем
+lecture_days - выхлоп c_plan.py -w 2, откорректированный вручную согласно с учебным календарем. 
+Импортируем:
+./stud_tools2.py -i base_name file_name
+./stud_tools2.py -r base_name students_...
+
+# gtk.STOCK_YES, gtk.STOCK_NO - зеленая и красная точка соответ
+# gtk.STOCK_DIALOG_ERROR - кирпич
+
+========================================================
+ИДЕИ И БАГИ
+========================================================
+
+#IDEA: сделать подведение итогов семестра 
+# просто берем select avg(mark) from grades where s_num= ...  where date like 2015%
+#IDEA: храним таблицу с данными студентов локально (напр в .config/studentus), а таблицы с оценками синкаем в Dropbox.
+
+# GUI:
+# полный список оценок, посещаемости и заметок (Notes) на одного студента. Combo - переключение (Details)
+# графики посещаемости и успеваемости (drawing area?)
+
+# idea: при старте программа должна спрашивать тему и тип текущего события.
+# Для начала сойдет Events() с курсором на текущем событии
+# В принципе надо выводить все текущие события (лекция + семинар + тест + м.б. сдача эссе подоспела)
+Menu:  Information
+# В конфиге - возможность отключить стартовое меню (start_dialog_on)
+# Последнее essay: select max(enddate), e_id, [enddate, topic?] from essays where enddate < self.date # старые работы - тоже, бывают удивительные студенты
+# Но при наличии assignments - это лишнее.
+
+идея: ограничить доступные даты только теми, в которые есть events. В другие дни оценки поставить не получится (а то неясно, как
+#их показать в Viewer)
+# напр: сегодня нет события (дома сижу), в Details выдается new entry без даты. В обработчике записи без даты отправляются 
+
+== Assignments ==
+# Таблица должников assignments (purgatory).
+# Функция проверки запускается при старте программы (или вызвается юзером)
+Покрасим должников в розовый цвет (или введем колонку E): 
+(select s_num from assignments join essays on assignments.e_id=essays.e_id where essays.enddate < self.date)
+считаем балл: if late <= 7: mark -= 0.5; else: mark = 2 (пускай ставится двойка автоматом: будут сильно просить, дадим персональное задание
+Personal assignment: multi-selection и через Details (нужна вкладка Assignments)
+Начало: 
+if essays.date == self.date: # показываем essays.topic в Information, всех активных студентов => в таблицу Assignments
+if lectures.date == self.date: # показываем lectures.topic в Information
+    etc.
+if self.date not in get_dates()[0]: # т.е. просто открываю дома - надо показать ближайшие события
+    select min(date), topic from [lectures, seminars...] where date > self.date
+
+GUI:
+# subclass(Details?) - для правки (оценки и каменты).
+base_class -> Details (2-3 views: Grades, Attendance, Assignments?), Info?, 
+Overlook: Grades, Assignments (2 views)
+
+должники в стартовое меню:
+(select s_num from assignments join essays on assignments.e_id=essays.e_id where essays.enddate < self.date
+# Information menu (Urgent) <= 'select s_num from assignments join essays on assignments.e_id=essays.e_id where essays.enddate < self.date' # TODO: расширить s_num => s_name
+# assignments: (a_num, s_num, e_id (essays), delivered(date), [date(when graded)???], mark, comment)
+# Когда юзер ставит mark, запись копируется в grades и удаляется из assignments: g_num=a_num, s_num, e_name='essays', e_num=e_id, date=[delivered?], mark, comment
+# Если сохранить в date дату delivered, то можно смело удалять из assignments!
+
+
+########## old way to find column number - get columns 
+########## currently we search through list of dates of events and grades (get_dates())
+
+    Сделать обновление avg() ? 
+------------   
+    Решено: Проблема с global - save_into_b() не видит их - 
+    temp_grades, temp_attend
+    Все дело в обнулении этих переменных в save_into_b. Глюк пропадает, как только убираешь обнуление.
+    Помогло pop() в цикле вместо присваивания пустого списка.
+--------------    
+    TODO: select avg(mark) from grades where s_num=N and date<2016 (1 semester)
+          select avg(mark) from grades where s_num=N and date>2016 (2 semester)
+          по идее проще                              and date like "2016%"
+
+# TODO: Dialog Destroy_wtih_parent - Esc в Диалоге подтверждения убивает parent вместе с диалогом.
+
+TODO: Обновлять статистику после записи результата в базу (ctrl+s) = save_into_b
+++ В short view выводить все оценки за сегодня (см. self.date) 
+Починить 4.0/5.0 r_marks? <= Фиксим.
+
+Снятие галочки в чекбоксе не приводит к удалению записи из temp_attend
+
+Combo- переключение между базами, - возможно это удобнее, чем два отдельных окна.
+
+Мульти-селекция студентов + ctrl+p (purgatory) - чтобы озадачить essay (personal, group assignment)

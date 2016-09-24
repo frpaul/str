@@ -1,0 +1,7 @@
+Аверьянов Кирилл//aver@yandex.ru//8-916-555-222-333//"Pictures/students/2016/aver.jpg"//1
+Петров Вася//petrov@gmail.com//8-999-888-77-78//"Pictures/students/2016/petrov.jpg"//1
+Сидоров Константин//sidorov@gmail.com//8-999-885-77-77//"Pictures/students/2016/sidorov.jpg"//1
+Семенов Владислав//semenov@gmail.com//8-999-898-77-77//"Pictures/students/2016/semenov.jpg"//1
+Круглов Дмитрий//kruglov@gmail.com//8-999-882-78-77//"Pictures/students/2016/kruglov.jpg"//1
+Квадратов Петр//kvadratov@gmail.com//8-999-388-77-77//"Pictures/students/2016/kvadratov.jpg"//1
+Ромбов Сергей//rombov@gmail.com//8-999-888-74-87//"Pictures/students/2016/rombov.jpg"//1
