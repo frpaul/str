@@ -26,7 +26,7 @@ class Conduit:
     def __init__(self, b_name=None):
 
         self.config = ConfigParser.ConfigParser()
-        self.config.read(os.path.join(os.path.expanduser('~'), '.config', 'studentus', 'studrc'))
+        self.config.read(os.path.join(os.path.expanduser('~'), '.config', 'str', 'strrc'))
 
         if not b_name:
             self.b_name = self.config.get('Paths', 'stud_path1')

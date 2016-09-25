@@ -2609,7 +2609,7 @@ if __name__ == '__main__':
     if options.config: # for debugging (alternative paths and stuff)
         c_path = options.config
     else:
-        c_path = os.path.join(os.path.expanduser('~'), '.config', 'studentus', 'studrc')
+        c_path = os.path.join(os.path.expanduser('~'), '.config', 'str', 'strrc')
 
     config = ConfigParser.ConfigParser()
     config.read(c_path)
