@@ -47,6 +47,7 @@ class Conduit:
         self.due = config.get('Settings', 'essays_due_time')  # Time for delivering essays 2 weeks.
 
         # get time
+        # to set STR to working condition 1) set self.date to strftime here, 2) do the same in choose_cl()
 #        self.date = now.strftime("%Y-%m-%d")
 #        self.date = '2015-09-01'
 #        self.date = '2015-09-08'
@@ -55,6 +56,7 @@ class Conduit:
         self.date = '2016-02-02'
 #        self.date = '2016-02-09'
 #        self.date = '2016-02-16'
+
 
         self.ev_names = ['lectures', 'essays', 'seminars', 'tests']
 
@@ -771,7 +773,11 @@ class Conduit:
 #        print ac
         if ac == 'All time':
             self.semester = 0
-            self.date = '2016-01-26'
+            self.date = '2016-02-02'
+#            self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
+        elif ac == 'Today':
+            self.date = '2016-02-02'
+            self.semester = self.get_years()[2]
 #            self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
         else:
             self.date = ac # set new current date for get_years() to work correctly
@@ -1158,24 +1164,38 @@ class Conduit:
                 iter_v = model.get_iter(path[0])
                 # vals = [mark, date, event + num, topic, saved (False = grade not saved, it's in temp_grades), index (in temp_grades)]
                 vals = []
-            for i in range(6):
-                att = model.get_value(iter_v, i) # s_num instead of s_name
-                vals.append(att)
 
-            if model.get_value(iter_v, 5):
-                print 'remove from base'
-                command = 'delete from attendance where a_num="' + str(vals[0]) + '"'
-                self.exec_sql(command)
-                model.remove(iter_v)
-                iter_m = gstud.w_model.get_iter(s_num - 1)
-                gstud.w_model.set_value(iter_m, 6, False)
-                gstud.w_model.set_value(iter_m, 7, False)
-            else:
-                print 'remove from list'
-                for t in range(len(temp_attend)):
-                    if temp_attend[t][0] == vals[0]:
-                        temp_attend.pop(t)
-                        model.remove(iter_v)
+                for i in range(6):
+                    att = model.get_value(iter_v, i) # s_num instead of s_name
+                    vals.append(att)
+                print 'vals', vals
+
+                if model.get_value(iter_v, 5):
+                    print 'remove from base'
+                    command = 'delete from attendance where a_num="' + str(vals[0]) + '"'
+                    self.exec_sql(command)
+                    model.remove(iter_v)
+
+#                    o_path = gstud.modelfilter.convert_path_to_child_path(s_num - 1)[0]
+                    o_path = s_num - 1
+#                    iter_m = gstud.w_model.get_iter(s_num - 1)
+                    iter_m = gstud.w_model.get_iter(o_path)
+
+                    if vals[2] == self.date: #  На случай, если удаляем не в self.date, а в другой день
+                        gstud.w_model.set_value(iter_m, 6, False)
+                        gstud.w_model.set_value(iter_m, 7, False)
+
+                    cm = 'select count(absence) from attendance where s_num="' + str(s_num) + '" and absence="L"' + self.get_tail()
+                    gstud.w_model[o_path][4] = self.exec_sql(cm)[0][0]
+                    cm = 'select count(absence) from attendance where s_num="' + str(s_num) + '" and absence="N"' + self.get_tail()
+                    gstud.w_model[o_path][3] = self.exec_sql(cm)[0][0]
+
+                else:
+                    print 'remove from list'
+                    for t in range(len(temp_attend)):
+                        if temp_attend[t][0] == vals[0]:
+                            temp_attend.pop(t)
+                            model.remove(iter_v)
 
     def edit_attend(self, cell, path, new_text, s_num, col_num):
         '''callback for Attendance when row is clicked '''
@@ -1188,6 +1208,7 @@ class Conduit:
         for i in range(6):
             at = self.mod_a.get_value(iter_v, i) # s_num instead of s_name
             vals.append(at)
+        print 'vals', vals
 
         if new_text == "Late" or new_text == "L":
             new_text = "L"
@@ -1200,14 +1221,15 @@ class Conduit:
             if col_num == 1 and new_text:
                 command = 'update attendance set absence="' + new_text + '" where a_num="' + vals[0] + '"'
                 self.exec_sql(command)
-#                gstud.w_model.set(
-                o_path = gstud.modelfilter.convert_path_to_child_path(s_num - 1)[0]
-                if new_text == "L":
-                    gstud.w_model[o_path][6] = False
-                    gstud.w_model[o_path][7] = True
-                elif new_text == "N":
-                    gstud.w_model[o_path][6] = True
-                    gstud.w_model[o_path][7] = False
+                o_path = s_num - 1
+
+                if vals[2] == self.date: # Если исправляем не за другой день, а в self.date
+                    if new_text == "L":
+                        gstud.w_model[o_path][6] = False
+                        gstud.w_model[o_path][7] = True
+                    elif new_text == "N":
+                        gstud.w_model[o_path][6] = True
+                        gstud.w_model[o_path][7] = False
 
                 cm = 'select count(absence) from attendance where s_num="' + str(s_num) + '" and absence="L"' + self.get_tail()
                 gstud.w_model[o_path][4] = self.exec_sql(cm)[0][0]
@@ -2323,6 +2345,7 @@ class Viewer(Conduit):
             self.combo_b.append_text(gtd[i])
             if gtd[i] == self.date: # if today is in CPlan
                 self.combo_b.set_active(i)
+        self.combo_b.append_text('Today')
 
         self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
         for j in self.combo_g_lst: 
@@ -2345,7 +2368,7 @@ class Viewer(Conduit):
 #        self.entry.connect('key_press_event', self.on_key_press_event)
         f_d = pango.FontDescription("sans normal 12")
 #        c_d = pango.Color("red")
-        l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Date: ' + self.date
+        l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
         self.label.set_text(l_text) # senior-minor year 
         self.label.modify_font(f_d)
 #        self.label.modify_style(c_d) # look up pango context
