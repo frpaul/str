@@ -1177,25 +1177,57 @@ class Conduit:
                         temp_attend.pop(t)
                         model.remove(iter_v)
 
-    def edit_attend(self, cell, path, new_text, s_num):
-        self.mod_a[path][4] = new_text # вставили новую оценку в TV
+    def edit_attend(self, cell, path, new_text, s_num, col_num):
+        '''callback for Attendance when row is clicked '''
+
+        # Attendance: a_num, s_num, date, absence, comment, saved
+        self.mod_a[path][col_num + 2] = new_text # вставили новую оценку в TV
         iter_v = self.mod_a.get_iter(path)
 
         vals = []
         for i in range(6):
             at = self.mod_a.get_value(iter_v, i) # s_num instead of s_name
             vals.append(at)
- 
-        if vals[5]: # saved
+
+        if new_text == "Late" or new_text == "L":
+            new_text = "L"
+        elif new_text == "Not present" or new_text == "N":
+            new_text = "N"
+
+        if vals[5]: # saved. TODO: По идее надо в save_into_b ставить все mod_a => saved=1
             # save to base
-            command = 'update attendance set comment="' + new_text + '" where a_num="' + vals[0] + '"'
-            self.exec_sql(command)
+
+            if col_num == 1 and new_text:
+                command = 'update attendance set absence="' + new_text + '" where a_num="' + vals[0] + '"'
+                self.exec_sql(command)
+#                gstud.w_model.set(
+                o_path = gstud.modelfilter.convert_path_to_child_path(s_num - 1)[0]
+                if new_text == "L":
+                    gstud.w_model[o_path][6] = False
+                    gstud.w_model[o_path][7] = True
+                elif new_text == "N":
+                    gstud.w_model[o_path][6] = True
+                    gstud.w_model[o_path][7] = False
+
+                cm = 'select count(absence) from attendance where s_num="' + str(s_num) + '" and absence="L"' + self.get_tail()
+                gstud.w_model[o_path][4] = self.exec_sql(cm)[0][0]
+                cm = 'select count(absence) from attendance where s_num="' + str(s_num) + '" and absence="N"' + self.get_tail()
+                gstud.w_model[o_path][3] = self.exec_sql(cm)[0][0]
+
+                # TODO: может стоит сделать переключение полей и для temp_attend? (Ниже)
+
+            elif col_num == 2:
+                command = 'update attendance set comment="' + new_text + '" where a_num="' + vals[0] + '"'
+                self.exec_sql(command)
         else:
-            print 'gonna change temp_attend'
+            print 'changing temp_attend'
             for i in range(len(temp_attend)):
 
                 if temp_attend[i][0] == vals[0]:
-                    temp_attend[i][4] = new_text.decode('utf-8')
+                    if col_num == 1 and new_text:
+                        temp_attend[i][3] = new_text.decode('utf-8')
+                    if col_num == 2:
+                        temp_attend[i][4] = new_text.decode('utf-8')
 
     def edit_notes(self, cell, path, new_text): 
         ''' Callback for Notes, short view '''
@@ -1445,10 +1477,8 @@ class Conduit:
 
             cur.close()
 
-    def get_avg(self, s_num):
-        ''' get average mark/mark cout '''
-
-######## Define tail for SQL command #########
+    def get_tail(self):
+        ''' Define tail for SQL command '''
         if self.semester == 2:
             tail = ' and date like "' + self.year_ls[1] + '%"'
 #            print 'tail', tail
@@ -1457,6 +1487,13 @@ class Conduit:
 #            print 'tail', tail
         else:
             tail = ''
+
+        return tail
+
+    def get_avg(self, s_num):
+        ''' get average mark/mark cout '''
+
+        tail = self.get_tail()
 
         # stats: Average grade
         cm = 'select avg(mark) from grades where s_num="' + s_num + '"' + tail
@@ -1780,7 +1817,7 @@ class Details(Conduit):
         # TODO: make "if" for essays (start and enddates wont show yet)
 
 class Attendance(Conduit):
-    ''' GUI for showing grades of a student at a given date (small grades menu) '''
+    ''' GUI for showing attendance of a student at a given date (small grades menu) '''
 
     def __init__(self, s_num, s_name, data_a): # mark, date, event (full), topic, saved, index
         Conduit.__init__(self)
@@ -1845,9 +1882,11 @@ class Attendance(Conduit):
 #        c1 = gtk.gdk.Color('#67cef9')#
         cell2.set_property('font', 'FreeSans 12')
         cell3.set_property('font', 'FreeSans 12')
+        cell3.set_property('editable', True)       
+        cell3.connect('edited', self.edit_attend, s_num, 1) # это номер колонки
         cell4.set_property('font', 'FreeSans 12')
         cell4.set_property('editable', True)       
-        cell4.connect('edited', self.edit_attend, s_num)  # , 4) # это номер колонки
+        cell4.connect('edited', self.edit_attend, s_num, 2)
 
         self.column2 = gtk.TreeViewColumn("date", cell2, text=2)
         self.column3 = gtk.TreeViewColumn("absence", cell3, text=3)
