@@ -997,6 +997,16 @@ class Conduit:
         self.e_tv.set_cursor(new_path, c_col, False)
         self.e_tv.grab_focus()
 
+    def make_new_en_att(self, model, s_num):            
+        ''' Make new entry for Attendance() '''
+        # Attendance: a_num, s_num, date, absence, comment, saved
+        new_iter = model.append(['', s_num, self.date, 'Late', '', False])
+        new_path = model.get_path(new_iter)[0]
+
+        # move selection to the new entry
+        c_col = self.a_tv.get_column(1)
+        self.a_tv.set_cursor(new_path, c_col, False)
+
     def make_new_en(self, model):            
         ''' Make new entry for Details() '''
 
@@ -1150,11 +1160,9 @@ class Conduit:
         
         if (keyname == "n" or keyname == "Cyrillic_te") and event.state & gtk.gdk.CONTROL_MASK: 
             # make a new entry 
-            model = self.g_tv.get_model()
-            print 'you hadn\'t done this one yet'
-
-            # make a new entry (mark is empty)
-#            self.make_new_en(model)
+            model = self.a_tv.get_model()
+            # make a new entry (L is set)
+            self.make_new_en_att(model, s_num)
 
         elif (keyname == "r" or keyname == "Cyrillic_ka") and event.state & gtk.gdk.CONTROL_MASK: 
             # remove row from base or from temp_grades
