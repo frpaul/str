@@ -174,6 +174,7 @@ class Conduit:
     def get_years(self):
         dts = self.get_dates()[0]
         year1 = dts.pop(0)[:4]
+        year2 = ''
         for dd in dts:
             if dd[:4] != year1:
                 year2 = dd[:4]
@@ -1403,6 +1404,7 @@ class Conduit:
         # Почему не работает ctrl_mask? OR неправильный, олух.
 
         elif (keyname == "m" or keyname == "Cyrillic_softsign") and event.state & gtk.gdk.CONTROL_MASK: 
+            # pick students to write essay
 #            self.combo.get_active() # essays, obviously. Then block it for other events
 #            self.selection
             model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
@@ -1457,7 +1459,8 @@ class Conduit:
 #                    enddate = self.get_enddate(vals[1])
 #                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
                 else:
-                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+#                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+                    comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
                     print comm
                     self.exec_sql(comm)
         # TODO: Складывать "лишние темы", получившиеся в результате пропусков, в отдельный файл (или таблицу), чтобы можно было вклеить их обратно (напр. в уже существующий лекционный день)
@@ -2709,7 +2712,7 @@ if __name__ == '__main__':
 # TODO: Information(): Тестить: сдача эссе подоспела
 # TODO: Выводить в Info все актуальные Notes.
 # TODO: Перенести часть опций из str_tools (-c, -i, -r...)
-# TODO:
+# TODO: Баг: при спуске темы в семинарах (ctrl + d), удаленная тема оказывается в лекциях?
 # TODO: 
 # TODO:
 # TODO:
