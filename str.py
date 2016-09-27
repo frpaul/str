@@ -33,6 +33,9 @@ temp_grades = []
 global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_num - hash
 temp_attend = []
 
+global debug
+debug = False
+
 class Conduit:
     '''Inspect students' attendance and grades, personal info'''
 
@@ -46,17 +49,20 @@ class Conduit:
 
         self.due = config.get('Settings', 'essays_due_time')  # Time for delivering essays 2 weeks.
 
+        if debug:
+#           self.date = now.strftime("%Y-%m-%d")
+#           self.date = '2015-09-01'
+#           self.date = '2015-09-08'
+#           self.date = '2015-12-29'
+#           self.date = '2016-01-26'
+            self.date = '2016-02-02'
+#           self.date = '2016-02-09'
+#           self.date = '2016-02-16'
+        else:
+            self.date = now.strftime("%Y-%m-%d")
+
         # get time
         # to set STR to working condition 1) set self.date to strftime here, 2) do the same in choose_cl()
-#        self.date = now.strftime("%Y-%m-%d")
-#        self.date = '2015-09-01'
-#        self.date = '2015-09-08'
-#        self.date = '2015-12-29'
-#        self.date = '2016-01-26'
-        self.date = '2016-02-02'
-#        self.date = '2016-02-09'
-#        self.date = '2016-02-16'
-
 
         self.ev_names = ['lectures', 'essays', 'seminars', 'tests']
 
@@ -774,12 +780,16 @@ class Conduit:
 #        print ac
         if ac == 'All time':
             self.semester = 0
-            self.date = '2016-02-02'
-#            self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
+            if debug:
+                self.date = '2016-02-02'
+            else:
+                self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
         elif ac == 'Today':
-            self.date = '2016-02-02'
+            if debug:
+                self.date = '2016-02-02'
+            else:
+                self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
             self.semester = self.get_years()[2]
-#            self.date = now.strftime("%Y-%m-%d") # TODO: show stuff for today time
         else:
             self.date = ac # set new current date for get_years() to work correctly
             self.semester = self.get_years()[2]
@@ -1455,6 +1465,7 @@ class Conduit:
             for n in range(len(model)):
                 vals = model.get(model.get_iter(n), 0, 1, 2, 3) # make separate for essays
                 if e_name == 'essays':
+                    # TODO: возможно стоит сделать тоже
                     print 'make new essay, delete old, don\'t be lazy'
 #                    enddate = self.get_enddate(vals[1])
 #                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
@@ -1463,7 +1474,7 @@ class Conduit:
                     comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
                     print comm
                     self.exec_sql(comm)
-        # TODO: Складывать "лишние темы", получившиеся в результате пропусков, в отдельный файл (или таблицу), чтобы можно было вклеить их обратно (напр. в уже существующий лекционный день)
+        # TODO: Складывать "лишние темы", получившиеся в результате пропусков, в отдельный файл (или таблицу), чтобы можно было вклеить их обратно (напр. в уже существующий лекционный день, или ctrl + up)
 
     def save_event(self):
         '''save new entry in Events() to base'''
@@ -2357,6 +2368,10 @@ class Viewer(Conduit):
             if gtd[i] == self.date: # if today is in CPlan
                 self.combo_b.set_active(i)
         self.combo_b.append_text('Today')
+                
+#        print 'len', len(self.combo_b.get_model())
+        if self.combo_b.get_active() == -1:
+            self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 
         self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
         for j in self.combo_g_lst: 
