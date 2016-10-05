@@ -52,7 +52,7 @@ class Conduit:
         command7 = "CREATE TABLE essays (e_id INTEGER PRIMARY KEY, date TEXT, enddate TEXT, topic TEXT, comment TEXT)"
         command8 = 'CREATE TABLE notes (c_num TEXT, s_num INTEGER, date TEXT, comment TEXT)' # TODO: make "fulfilled" or "acted_on" column
         command9 = 'CREATE TABLE assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)'
-        for com in [command, command2, command3, command4, command5, command6, command7, command8]:
+        for com in [command, command2, command3, command4, command5, command6, command7, command8, command9]:
             cur.execute(com) # TODO: executescript()
 
         cur.close()

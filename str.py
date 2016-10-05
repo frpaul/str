@@ -35,6 +35,7 @@ temp_attend = []
 
 global debug
 debug = False
+#debug = True
 
 class Conduit:
     '''Inspect students' attendance and grades, personal info'''
@@ -325,11 +326,8 @@ class Conduit:
                                 #  status, a_num (hide), s_name, e_word (essays), topic 
                                 #  notifications:
                                 #  status (напр.: "не забудь!", c_num, s_name, e_word (notification), comment
-        tail = ''
-        if self.semester == 1:
-            tail = " and essays.date < '2016'"
-        elif self.semester == 2:
-            tail = " and essays.date > '2015'"
+
+        tail = self.get_tail('essays')
 
                                #  str, str, str, str, str)
         # должники
@@ -357,11 +355,8 @@ class Conduit:
 
     def ins_info(self):
         ''' Insert info into Information (events) '''
-        tail = ''
-        if self.semester == 1:
-            tail = " and date < '2016'"
-        elif self.semester == 2:
-            tail = " and date > '2015'"
+
+        tail = self.get_tail()
 
         cm = "select e_id, min(date), topic from lectures where date>='" + self.date + "'" + tail
         l_dates = self.exec_sql(cm)
@@ -418,15 +413,8 @@ class Conduit:
         res = []
 
 ######## Define tail for SQL command #########
-        if self.semester == 2:
-            tail = ' and date like "' + self.year_ls[1] + '%"'
-#            print 'tail', tail
-        elif self.semester == 1:
-            tail = ' and date like "' + self.year_ls[0] + '%"'
-#            print 'tail', tail
-        else:
-            tail = ''
-#            print 'tail', tail
+
+        tail = self.get_tail()
 
         for s_n, s_name, act in full_st_l:
             c_res = []
@@ -1409,9 +1397,9 @@ class Conduit:
             # make a new entry (mark is empty - default event)
             self.make_new_ev(model)
         elif (keyname == "s" or keyname == "Cyrillic_yeru") and event.state & gtk.gdk.CONTROL_MASK: 
-            self.save_event()
-        # TODO: влазит что-то и "n" при правке текста выдает новую запись c+n
-        # Почему не работает ctrl_mask? OR неправильный, олух.
+            model = self.e_tv.get_model()
+            self.save_events(model)
+            self.new_ev = False
 
         elif (keyname == "m" or keyname == "Cyrillic_softsign") and event.state & gtk.gdk.CONTROL_MASK: 
             # pick students to write essay
@@ -1426,8 +1414,11 @@ class Conduit:
         elif (keyname == "d" or keyname == "Cyrillic_ve") and event.state & gtk.gdk.CONTROL_MASK: 
             self.topic_down()
 
+        elif (keyname == "u" or keyname == "Cyrillic_ghe") and event.state & gtk.gdk.CONTROL_MASK: 
+            self.topic_up()
+
     def topic_down(self):
-        '''Move topics below the current, one position (date) down'''
+        '''Move topics, starting with the current, one position (date) down'''
         
         model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
 #        rows = model.get_n_columns()
@@ -1437,10 +1428,10 @@ class Conduit:
         while True:
             if new_top:
                 new_itr = model.iter_next(itr)
-                if new_itr:
-                    old_top = model.get_value(new_itr, 2)
+                if new_itr: # есть еще строчка в TV
+                    old_top = model.get_value(new_itr, 2) # сохраняем тему, стоявшую на следующей дате
                     print old_top.encode('utf-8')
-                    model.set(new_itr, 2, new_top)
+                    model.set(new_itr, 2, new_top) # ставим предыдущую тему на следующую дату
                     new_top = old_top
                     itr = new_itr
                 else:
@@ -1448,7 +1439,7 @@ class Conduit:
             else:
                 # 0 cycle. Topic is left empty, for I missed that day.
                 itr = model.get_iter(paths[0][0])
-                print 'path, itr', paths[0][0], itr
+#                print 'path, itr', paths[0][0], itr
                 new_top = model.get_value(itr, 2)
 #                print '0 cycle, top', new_top.encode('utf-8')
                 if new_top:
@@ -1460,7 +1451,7 @@ class Conduit:
 
         print 'while cycle ended'
         # save to base
-        if self.rem_confirm('Save new event list?'):
+        if self.rem_confirm('Save new event list?'): # TODO: confirmation after _all_ changes done! Save => separate callback
             e_name = self.combo.get_active_text() 
             for n in range(len(model)):
                 vals = model.get(model.get_iter(n), 0, 1, 2, 3) # make separate for essays
@@ -1476,16 +1467,77 @@ class Conduit:
                     self.exec_sql(comm)
         # TODO: Складывать "лишние темы", получившиеся в результате пропусков, в отдельный файл (или таблицу), чтобы можно было вклеить их обратно (напр. в уже существующий лекционный день, или ctrl + up)
 
-    def save_event(self):
-        '''save new entry in Events() to base'''
-        # get new info:
-        model = self.e_tv.get_model()
-        n = model.get_n_columns()
-        itr = model.get_iter(n - 1)
-        cc = []
-        for i in range(n):
-            cc.append[i]
-        print model.get(itr, *cc)
+    def topic_up(self):
+        '''Move topics, starting with the current, one position (date) up'''
+        
+        model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
+#        rows = model.get_n_columns()
+        new_top = ''
+
+        cur_path = paths[0][0]
+
+        # 0 цикл. Текущую тему приклеиваем к предыдущей # TODO: меню: concatenate or drop first line?
+        if cur_path: # not 0 - else cannot move up
+            new_itr = model.get_iter(cur_path)
+            old_itr = model.get_iter(cur_path - 1)
+#                print 'path, itr', paths[0][0], itr
+            new_top = model.get_value(new_itr, 2)
+            old_top = model.get_value(old_itr, 2)
+            conc = ' '.join([old_top, new_top])
+#                print '0 cycle, top', new_top.encode('utf-8')
+            # TODO: постоянная ширина колонки 'topic'
+        else:
+            print '0 row, nothing to do'
+            return
+        #if new_top
+        model.set(old_itr, 2, conc)
+
+        # move topics up 1 step in a model:
+        while True:
+            old_itr = new_itr
+            new_itr = model.iter_next(old_itr)
+            if new_itr: # есть еще строчка в TV
+                new_top = model.get_value(new_itr, 2)
+                print new_top.encode('utf-8')
+                model.set(old_itr, 2, new_top) # ставим предыдущую тему на следующую дату
+            else:
+                break
+
+        print 'while cycle ended'
+        # save to base
+#        if self.rem_confirm('Save new event list?'): # TODO: confirmation after _all_ changes done! Save => separate callback
+#            e_name = self.combo.get_active_text() 
+#            for n in range(len(model)):
+#                vals = model.get(model.get_iter(n), 0, 1, 2, 3) # make separate for essays
+#                if e_name == 'essays':
+#                    # TODO: возможно стоит сделать тоже
+#                    print 'make new essay, delete old, don\'t be lazy'
+##                    enddate = self.get_enddate(vals[1])
+##                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+#                else:
+##                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+#                    comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+#                    print comm
+#                    self.exec_sql(comm)
+
+    def save_events(self, model):
+        '''Save changes in Events() to base'''
+# найти список моделей для events, цикл по ev_names[i]
+        
+        if self.rem_confirm('Save changes in Events?'):
+#            for e_name in self.ev_names:
+            for i in range(len(self.ev_names)):
+                model = self.e_models[i]
+                e_name = self.ev_names[i]
+                for n in range(len(model)):
+                    if e_name == 'essays':
+                        vals = model.get(model.get_iter(n), 0, 1, 2, 3, 4)
+                        comm = "update essays set enddate ='" + vals[2] + "', topic='" + vals[3] + "', comment='" + vals[4] + "' where e_id='" + str(vals[0]) + "'"
+                    else:
+                        vals = model.get(model.get_iter(n), 0, 1, 2, 3)
+                        comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
+                    print comm
+                    self.exec_sql(comm)
 
     def save_into_b(self):
         '''save info in temporary lists to base'''
@@ -1521,13 +1573,20 @@ class Conduit:
 
             cur.close()
 
-    def get_tail(self):
+    def get_tail(self, prefix=None):
         ''' Define tail for SQL command '''
+
+        # for ambiguous col names like essays.date
+        if prefix:
+            date_str = ' and ' + prefix + '.date like "'
+        else:
+            date_str = ' and date like "'
+
         if self.semester == 2:
-            tail = ' and date like "' + self.year_ls[1] + '%"'
+            tail = date_str + self.year_ls[1] + '%"'
 #            print 'tail', tail
         elif self.semester == 1:
-            tail = ' and date like "' + self.year_ls[0] + '%"'
+            tail = date_str + self.year_ls[0] + '%"'
 #            print 'tail', tail
         else:
             tail = ''
@@ -1604,6 +1663,8 @@ class Conduit:
             print 'no b_name, using old b_name'
             home = os.path.expanduser('~')
             base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
+        if debug:
+            print 'base_p', base_p
         conn = sqlite3.connect(base_p)
         
         return conn
@@ -2241,7 +2302,9 @@ class Events(Conduit):
         if ev_n == 1:
             cell5 = gtk.CellRendererText()
             cell5.set_property('font', 'FreeSans 12')
-            column5 = gtk.TreeViewColumn('deadline', cell5, text=2) 
+            cell5.set_property('editable', True)       
+            cell5.connect('edited', self.edit_event, 2)
+            column5 = gtk.TreeViewColumn('deadline', cell5, text=2) # enddate in the model
             res.append(column5)
             tx1 = 3
             tx2 = 4
@@ -2707,6 +2770,7 @@ if __name__ == '__main__':
             b_name = config.get('Paths', 'stud_path1')
         elif options.switch == '2':
             b_name = config.get('Paths', 'stud_path2')
+            print b_name
         gstud = Viewer()
     else:
         print "no options given, exiting"
@@ -2714,9 +2778,8 @@ if __name__ == '__main__':
     main()
 
 # TODO: В Events ставим курсор на текущую дату (если есть) или в начало списка, если нету
-# TODO: В Events приделать нормальное ctrl+n - добавление события (напр. тесты, эссе!) - тестить!
 # TODO: make checkbox delete absence record (+popup)
-# TODO: Details: общий GUI switch between Grades, Attendance, Assignments, Notes(?)
+# TODO: Details: общий GUI: switch between Grades, Attendance, Assignments, Notes(?)
 # TODO: Details: Сделать комментарии к оценкам: в Details - колонку, в edited_g... - добавить опцию
 # TODO: Details: Надо ставить по умолчанию не текущее событие, а предыдущее (за которое обычно и ставится оценка)
 # TODO: Редактирование поля L/N в Attendance.
@@ -2725,11 +2788,10 @@ if __name__ == '__main__':
 # Не очень актуально: SQL Errors go to status bar (others too), (gtk.Statusbar), log
 # Сделать окошко для всех temp_grades ? В принципе, может пригодиться
 # TODO: Information(): Тестить: сдача эссе подоспела
-# TODO: Выводить в Info все актуальные Notes.
-# TODO: Перенести часть опций из str_tools (-c, -i, -r...)
-# TODO: Баг: при спуске темы в семинарах (ctrl + d), удаленная тема оказывается в лекциях?
 # TODO: 
-# TODO:
+# TODO: Перенести часть опций из str_tools (-c, -i, -r...)
+# TODO: Удаление тем из Events (если еще нет в Grades)
+# TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
 # TODO:
 # TODO:
 # TODO: 
