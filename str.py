@@ -373,8 +373,8 @@ class Conduit:
         dates = [l_dates[0], s_dates[0], t_dates[0], e_dates[0], d_dates[0]]
 
         for dd in range(len(dates)):
-            print dd, dates[dd][1]
-            print 'sem', self.semester
+#            print dd, dates[dd][1]
+#            print 'sem', self.semester
 
             if dates[dd][0]:
                 itr = self.mod_i.append()
@@ -1076,10 +1076,12 @@ class Conduit:
                 e_num = line[4]
 
                 e_word = e_name + " " + str(e_num)
+                comment = line[6]
 
                 cm = 'select topic from ' + e_name + ' where e_id="' + str(e_num) + '"' 
+                print 'cm', cm
                 event_l = self.exec_sql(cm)[0]
-                res.append([line[0], line[5], line[2], e_word, event_l[0], True, 0]) # g_num, mark, date, event (full), topic, saved, index
+                res.append([line[0], line[5], line[2], e_word, event_l[0], comment, True]) # g_num, mark, date, event (full), topic, saved, index
             res.extend(g_temp_ls) # добавим временные оценки к взятым из базы
 
             self.grada = Details(s_num, s_name, res)
@@ -1658,8 +1660,8 @@ class Conduit:
             print 'no b_name, using old b_name'
             home = os.path.expanduser('~')
             base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
-        if debug:
-            print 'base_p', base_p
+#        if debug:
+#            print 'base_p', base_p
         conn = sqlite3.connect(base_p)
         
         return conn
@@ -1868,7 +1870,7 @@ class Details(Conduit):
                 iter = self.mod_g.append()
 
                                     #  g_num, grade, date, event (full), topic, comment, saved 
-                self.mod_g.set(iter, 0, ln[0], 1, ln[1], 2, ln[2], 3, ln[3], 4, ln[4], 5, ln[5], 6, ln[5])
+                self.mod_g.set(iter, 0, ln[0], 1, ln[1], 2, ln[2], 3, ln[3], 4, ln[4], 5, ln[5], 6, ln[6])
         else:
             # make a new entry (mark is empty)
             self.make_new_en(self.mod_g)
@@ -1883,6 +1885,7 @@ class Details(Conduit):
         cell2 = gtk.CellRendererText()
         cell3 = gtk.CellRendererText()
         cell4 = gtk.CellRendererText()
+        cell5 = gtk.CellRendererText()
 
 #        c1 = gtk.gdk.Color('#6ef36e')#67cef9
         c1 = gtk.gdk.Color('#67cef9')#
@@ -1893,17 +1896,22 @@ class Details(Conduit):
         cell2.set_property('font', 'FreeSans 12')
         cell3.set_property('font', 'FreeSans 12')
         cell4.set_property('font', 'FreeSans 12')
+        cell5.set_property('font', 'FreeSans 12')
+        cell5.set_property('editable', True)       
+#        cell5.connect('edited', self.edit_grade, s_num) 
 
         self.column1 = gtk.TreeViewColumn("grade", cell1)
         self.column1.set_attributes(cell1, text=1, cell_background_set=6) # blue for saved entries
         self.column2 = gtk.TreeViewColumn("date", cell2, text=2)
         self.column3 = gtk.TreeViewColumn("event", cell3, text=3)
         self.column4 = gtk.TreeViewColumn("topic", cell4, text=4)
+        self.column5 = gtk.TreeViewColumn("comment", cell5, text=5)
 
         self.g_tv.append_column(self.column1)
         self.g_tv.append_column(self.column2)
         self.g_tv.append_column(self.column3)
         self.g_tv.append_column(self.column4)
+        self.g_tv.append_column(self.column5)
 #
         g_sw.show_all()
         self.g_tv.show()
