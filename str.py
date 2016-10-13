@@ -28,6 +28,7 @@ global cur_model
 #global self.c_group
 # temporary list of grades. After 'Save' is pressed list is written into base
 global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark)]
+#        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
 temp_grades = []
 # temp list of attendance
 global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_num - hash
@@ -924,7 +925,7 @@ class Conduit:
 #        destroy_cb(self) # можно сделать два объекта Events() c разными коллбэками. Один - с дестроем, другой - без
 
     def open_ev(self, tv, g_path, column):
-        ''' callback for Grader() button 'Event' - choose event '''
+        ''' callback for Details() when clicked on date - open Events, choose event '''
         res = Events(g_path)
 
     def ins_new_event(self, e_type, date, topic, due=2): 
@@ -1007,8 +1008,10 @@ class Conduit:
         self.new_gr = True # entry was just created (but not saved even to temp_grades)
 
         for tab in ['lectures', 'seminars']:
-            # ищем актуальную лекцию, или семинар (на сегодняшний день) #TODO: а надо на прошлый раз!
+            # ищем актуальную лекцию, или семинар (на сегодняшний день) 
             # lectures, seminars: e_id, date, topic , comment)"
+#TODO: а надо на прошлый раз!
+# select ... max(date) from tab where date < self.date # надо подзапросом
             command = 'select * from ' + tab + ' where date="' + self.date + '"'
             lecs = self.exec_sql(command)
 #            print 'lecs', lecs
@@ -1022,7 +1025,9 @@ class Conduit:
 
             # grades (base):  g_num, s_num, e_name, e_num, date, mark, comment 
                     #  model: g_num, grade, date, event (full), topic, saved
-        new_iter = model.append(['', '', self.date, ev, top, None, False])
+
+#                
+        new_iter = model.append([str(uuid.uuid4())[:8], '', self.date, ev, top, None, False])
         new_path = model.get_path(new_iter)[0]
 
         # move selection to the new entry
@@ -1050,7 +1055,7 @@ class Conduit:
         s_num = self.modelfilter.get_value(iter_v, 0) # возможно, что-то не так: итер нужно конвертнуть?
         s_name = self.modelfilter.get_value(iter_v, 1)
 
-        g_temp_ls = [] # list of temporary marks (not in the base)
+        g_temp_ls = [] # list of temporary marks (not in the base) => feed to Details()
 
 #        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
         # Отберем "временные" оценки данного студента:
@@ -1136,15 +1141,17 @@ class Conduit:
                 # vals = [mark, date, event + num, topic, saved (False = grade not saved, it's in temp_grades), index (in temp_grades)]
                 g_num =  model.get_value(iter_v, 0)
 
-                if model.get_value(iter_v, 5):
+                if model.get_value(iter_v, 6):
                     print 'remove from base'
                     command = 'delete from grades where g_num="' + str(g_num) + '"'
                     self.exec_sql(command)
-                    model.remove(iter_v)
                 else:
                     print 'remove from list'
-                    temp_grades.pop(model.get_value(iter_v, 6))
-                    model.remove(iter_v)
+#                    temp_grades.pop(model.get_value(iter_v, 6)) # wrong!
+                    for i in range(len(temp_grades)):
+                        if g_num == temp_grades[i][0]:
+                            temp_grades.pop(i)
+                model.remove(iter_v)
 # TODO: remove mark from short view also
 
     def fix_absence_cb(self, widget, event, s_num):
@@ -1283,19 +1290,23 @@ class Conduit:
         # TODO: перечитать TV в Vewer short view
             self.reload_sh()
 
-    def edit_grade(self, cell, path, new_text, s_num):
+    def edit_grade(self, cell, path, new_text, s_num, col):
         ''' callback for Details - editing grade column '''
 
         #  mod_g: g_num, grade, date, event (full), topic, comment, saved
         # edit only mark, if you're not happy with the rest, better remove all grade, and start over
-        self.mod_g[path][1] = new_text # вставили новую оценку в TV
+        self.mod_g[path][col] = new_text # вставили новую оценку в TV
         iter_v = self.mod_g.get_iter(path)
         vals = []
-        for i in range(6):
+        for i in range(7):
             gr = self.mod_g.get_value(iter_v, i) # s_num instead of s_name
             vals.append(gr)
 #            print 'gr', gr
         e_ls = vals[3].split()
+        g_num = vals[0]
+
+
+        print vals
 
         if self.new_gr:  # entry was just created (but not saved even to temp_grades)
             # s_num, e_name, e_num, date, mark, comment=None
@@ -1305,7 +1316,8 @@ class Conduit:
             itr = gstud.w_model.get_iter(s_num - 1)
 
             if r_mark:
-                temp_grades.append([str(uuid.uuid4())[:8], s_num, e_ls[0], e_ls[1], vals[2], vals[1], vals[5]]) 
+#                temp_grades.append([str(uuid.uuid4())[:8], s_num, e_ls[0], e_ls[1], vals[2], vals[1], vals[5]]) 
+                temp_grades.append([g_num, s_num, e_ls[0], e_ls[1], vals[2], vals[1], vals[5]]) 
                 gstud.w_model.set_value(itr, 8, r_mark)
 
                 self.new_gr = False
@@ -1315,17 +1327,25 @@ class Conduit:
         else: # editing old entries
 
 #            if self.mod_g.get_value(iter_v, 4):
-            if vals[5]: # saved - оценка записана в базу, правим прямо там
+            if vals[6]: # saved - оценка записана в базу, правим прямо там
                 print 'changing the base'
-                command = 'update grades set mark=' + new_text + ' where g_num="' + str(vals[0]) + '"'
+                if col == 1:
+                    command = 'update grades set mark=' + new_text + ' where g_num="' + str(vals[0]) + '"'
+                elif col == 5:
+                    command = 'update grades set comment=' + new_text + ' where g_num="' + str(vals[0]) + '"'
+
 #                print command
                 self.exec_sql(command)
 
             else: # оценка - в temp_grades, а не в базе
+#        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
                 print 'changing temp list'
                 for i in range(len(temp_grades)):
                     if temp_grades[i][0] == vals[0]:
-                        temp_grades[i][5] = new_text # глюк здесь?
+                        if col == 1:
+                            temp_grades[i][5] = new_text
+                        if col == 5:
+                            temp_grades[i][6] = new_text
 
             r_mark = self.check_old_grades(s_num, e_ls[0], e_ls[1], vals[2], vals[1])
             # show today's grades in Short view: 5.0/3.5...
@@ -1892,13 +1912,13 @@ class Details(Conduit):
         cell1.set_property('font', 'FreeSans 12')
         cell1.set_property('cell-background', c1)  # blue for saved entries
         cell1.set_property('editable', True)       
-        cell1.connect('edited', self.edit_grade, s_num) 
+        cell1.connect('edited', self.edit_grade, s_num, 1) 
         cell2.set_property('font', 'FreeSans 12')
         cell3.set_property('font', 'FreeSans 12')
         cell4.set_property('font', 'FreeSans 12')
         cell5.set_property('font', 'FreeSans 12')
         cell5.set_property('editable', True)       
-#        cell5.connect('edited', self.edit_grade, s_num) 
+        cell5.connect('edited', self.edit_grade, s_num, 5) 
 
         self.column1 = gtk.TreeViewColumn("grade", cell1)
         self.column1.set_attributes(cell1, text=1, cell_background_set=6) # blue for saved entries
@@ -1919,8 +1939,8 @@ class Details(Conduit):
         window_g.show()
 
 #        self.g_tv.connect('row-activated', self.edit_grade)
-        window_g.connect('key_press_event', self.fix_grades_cb, s_num)
-        self.g_tv.connect('row-activated', self.open_ev)
+        window_g.connect('key_press_event', self.fix_grades_cb, s_num) # all other callbacks
+        self.g_tv.connect('row-activated', self.open_ev) # when clicked on date - open Events, choose event '''
 
         # TODO: make "if" for essays (start and enddates wont show yet)
 
@@ -2789,13 +2809,19 @@ if __name__ == '__main__':
 # TODO: show student's picture, so you know, to whom you gave F-
 # TODO: Глюк: при исправлении старой оценки вылазит Popup "this student already had a grade..."
 # Не очень актуально: SQL Errors go to status bar (others too), (gtk.Statusbar), log
+# CLI: Двоеточие или / - команды-фильтры (today, last - in grades), поиск
 # Сделать окошко для всех temp_grades ? В принципе, может пригодиться
-# TODO: Information(): Тестить: сдача эссе подоспела
 # TODO: 
 # TODO: Перенести часть опций из str_tools (-c, -i, -r...)
+# TODO: нужна возможность отдельно импортировать lections, seminars
 # TODO: Удаление тем из Events (если еще нет в Grades)
 # TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
 # TODO: При move up событий - всплывающее меню "concatenate/drop"
-# TODO:
+# TODO: bug: Details: comment не сохраняется для saved = False (temp_grades)
+# TODO: Details: ctrl+n - сразу ставим g_num (hash) - иначе потом не поймешь, как выбрать запись для редактирования
+# TODO: line 659 - what the??? Разберись, нужно ли сохранять attendace в модели. Странно это.
+# TODO: Разберись, нужен ли temp_grades (temp_attend можно оставить)
 # TODO: 
 # TODO: 
+# TODO: 
+# TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
