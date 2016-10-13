@@ -34,8 +34,8 @@ global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_nu
 temp_attend = []
 
 global debug
-debug = False
-#debug = True
+#debug = False
+debug = True
 
 class Conduit:
     '''Inspect students' attendance and grades, personal info'''
@@ -843,64 +843,121 @@ class Conduit:
     def assign_save(self, widget, event):
         keyname = gtk.gdk.keyval_name(event.keyval)
         if (keyname == "s" or keyname == "Cyrillic_yeru") and event.state & gtk.gdk.CONTROL_MASK: 
-
-            model = self.aa_model
-            vals = []
-            for i in range(len(model)):
-                itr = model.get_iter(i)
-#                v = model.get(itr, 0, 3, 5, 6) # a_num, delivered(date), mark and comment
-                v = model.get(itr, 0, 1, 2, 3, 4, 5, 6) # a_num, s_name, topic, delivered(date), date, mark and comment
-                vals.append(v)
-#            print vals
+            # idea1: while True; get_iter_next
             if self.rem_confirm('Save data?'):
-#                for v in vals:
-                for vv in range(len(vals)):
-                    v = vals[vv]
+                model = self.aa_model
+                refs = []
+                for i in range(len(model)):
+                    x = gtk.TreeRowReference(model, i)
+                    refs.append(x)
 
-                    a_num = v[0]
-                    s_name = v[1]
-                    top = v[2]
-                    dl = v[3]
-                    dt = v[4]
-                    mk = v[5]
-                    cmt = v[6]
-                    # grades: (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
-                    if mk:
-                        e_id = self.exec_sql("select e_id from essays where topic='" + top + "'")[0][0]
-                        s_num = self.exec_sql("select s_num from students where s_name='" + s_name + "'")[0][0]
-                        s_num = int(s_num)
-                        e_id = int(e_id)
+                for r in refs:
+#                    p = r.get_path()
+                    new_itr = model.get_iter(r.get_path())
+                    if new_itr:
+                        v = model.get(new_itr, 0, 1, 2, 3, 4, 5, 6) # a_num, s_name, topic, delivered(date), date, mark and comment
+                        a_num = v[0]
+                        s_name = v[1]
+                        top = v[2]
+                        dl = v[3]
+                        dt = v[4]
+                        mk = v[5]
+                        cmt = v[6]
+                        # grades: (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
+                        if mk:
+                            e_id = self.exec_sql("select e_id from essays where topic='" + top + "'")[0][0]
+                            s_num = self.exec_sql("select s_num from students where s_name='" + s_name + "'")[0][0]
+                            s_num = int(s_num)
+                            e_id = int(e_id)
 
 #                        print a_num, s_num, e_id, dt, mk, cmt
 #                        print type(a_num), type(s_num), type(e_id), type(dt), type(mk), type(cmt)
-                        if cmt:
-                            cmt = cmt.decode('utf-8')
-                        cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
-                                        # text, int, text, int, text, real, text
-                        self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
+                            if cmt:
+                                cmt = cmt.decode('utf-8')
+                            cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
+                                            # text, int, text, int, text, real, text
+                            self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
 
 #                        cm = "delete from assignments where a_num='" + a_num + "'" # let it be there, just in case...
-                        if cmt:
-                            cmt = "'" + cmt + "'"
-                        else:
-                            cmt = 'NULL'
-                        cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
-                        self.exec_sql(cm)
+                            if cmt:
+                                cmt = "'" + cmt + "'"
+                            else:
+                                cmt = 'NULL'
+                            cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
+                            self.exec_sql(cm)
 
-                        model.remove(model.get_iter(vv))
-# в update странность: надо ставить кавычки у литералов, а NULL - без кавычек (просто '' не прокатывает)
-                    else:
-                        if not dl or dl == ' ':
-                            dl = 'NULL'
-                        else:
-                            dl = "'" + dl + "'" # нужны кавыки, иначе не жрет
-                        if not cmt or cmt == ' ':
-                            cmt = 'NULL'
-                        else:
-                            cmt = "'" + cmt + "'"
+                            model.remove(new_itr)
 
-                        cm = "update assignments set delivered=" + dl + ", comment=" + cmt + " where a_num='" + a_num + "'"
-                        self.exec_sql(cm)
+                        else:
+                            if not dl or dl == ' ':
+                                dl = 'NULL'
+                            else:
+                                dl = "'" + dl + "'" # нужны кавыки, иначе не жрет
+                            if not cmt or cmt == ' ':
+                                cmt = 'NULL'
+                            else:
+                                cmt = "'" + cmt + "'"
+
+                            cm = "update assignments set delivered=" + dl + ", comment=" + cmt + " where a_num='" + a_num + "'"
+                            self.exec_sql(cm)
+
+#            model = self.aa_model
+#            vals = []
+#            for i in range(len(model)):
+#                itr = model.get_iter(i)
+##                v = model.get(itr, 0, 3, 5, 6) # a_num, delivered(date), mark and comment
+#                v = model.get(itr, 0, 1, 2, 3, 4, 5, 6) # a_num, s_name, topic, delivered(date), date, mark and comment
+#                vals.append(v)
+##            print vals
+#            if self.rem_confirm('Save data?'):
+##                for v in vals:
+#                for vv in range(len(vals)):
+#                    v = vals[vv]
+#
+#                    a_num = v[0]
+#                    s_name = v[1]
+#                    top = v[2]
+#                    dl = v[3]
+#                    dt = v[4]
+#                    mk = v[5]
+#                    cmt = v[6]
+#                    # grades: (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
+#                    if mk:
+#                        e_id = self.exec_sql("select e_id from essays where topic='" + top + "'")[0][0]
+#                        s_num = self.exec_sql("select s_num from students where s_name='" + s_name + "'")[0][0]
+#                        s_num = int(s_num)
+#                        e_id = int(e_id)
+#
+##                        print a_num, s_num, e_id, dt, mk, cmt
+##                        print type(a_num), type(s_num), type(e_id), type(dt), type(mk), type(cmt)
+#                        if cmt:
+#                            cmt = cmt.decode('utf-8')
+#                        cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
+#                                        # text, int, text, int, text, real, text
+#                        self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
+#
+##                        cm = "delete from assignments where a_num='" + a_num + "'" # let it be there, just in case...
+#                        if cmt:
+#                            cmt = "'" + cmt + "'"
+#                        else:
+#                            cmt = 'NULL'
+#                        cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
+#                        self.exec_sql(cm)
+#
+#                        model.remove(model.get_iter(vv))
+## в update странность: надо ставить кавычки у литералов, а NULL - без кавычек (просто '' не прокатывает)
+#                    else:
+#                        if not dl or dl == ' ':
+#                            dl = 'NULL'
+#                        else:
+#                            dl = "'" + dl + "'" # нужны кавыки, иначе не жрет
+#                        if not cmt or cmt == ' ':
+#                            cmt = 'NULL'
+#                        else:
+#                            cmt = "'" + cmt + "'"
+#
+#                        cm = "update assignments set delivered=" + dl + ", comment=" + cmt + " where a_num='" + a_num + "'"
+#                        self.exec_sql(cm)
 
     def assign_set(self, cell, path, new_text, col):
         '''Callback for Assignments, when row is edited'''
@@ -2792,7 +2849,7 @@ if __name__ == '__main__':
 # TODO: Перенести часть опций из str_tools (-c, -i, -r...)
 # TODO: Удаление тем из Events (если еще нет в Grades)
 # TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
-# TODO:
+# TODO: При move up событий - всплывающее меню "concatenate/drop"
 # TODO:
 # TODO: 
 # TODO: 
