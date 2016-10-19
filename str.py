@@ -903,6 +903,11 @@ class Conduit:
 
         iter_cur = self.aa_model.get_iter(path)
         self.aa_model.set(iter_cur, col, new_text)
+        # check for "delivered" being set: (else algorythm for Information.debtors gets messed up)
+        if col == 5: # mark
+            deliv = self.aa_model.get_value(iter_cur, 3) # delivered
+            if not deliv:
+                Popup('no delivery date!')
 
     def event_set(self, tv, path, column, g_path):
         '''Callback for Entry - when row with event is chosen'''
@@ -1760,6 +1765,7 @@ class Information(Conduit):
                                 #  notifications:
                                 #  status (напр.: "не забудь!", c_num, s_name, e_word (notification), comment
 
+        # isert information into model
         ins_info = self.ins_info()
         ins_debt = self.ins_debt()
 
@@ -2107,7 +2113,6 @@ class Choose_students(Conduit):
         return res
 
 class Assign(Conduit):
-
     '''GUI for assignments: essays. and personal quests '''
 
     def __init__(self, stud_ls=None):
@@ -2817,11 +2822,9 @@ if __name__ == '__main__':
 # TODO: Удаление тем из Events (если еще нет в Grades)
 # TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
 # TODO: При move up событий - всплывающее меню "concatenate/drop"
-# TODO: bug: Details: comment не сохраняется для saved = False (temp_grades)
-# TODO: Details: ctrl+n - сразу ставим g_num (hash) - иначе потом не поймешь, как выбрать запись для редактирования
 # TODO: line 659 - what the??? Разберись, нужно ли сохранять attendace в модели. Странно это.
 # TODO: Разберись, нужен ли temp_grades (temp_attend можно оставить)
+# TODO: Нужен ли бэкап отдельно, если есть dump?
 # TODO: 
-# TODO: 
-# TODO: 
+# TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
 # TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
