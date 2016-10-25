@@ -17,14 +17,12 @@ import ConfigParser
 import types
 import logging
 import datetime
-#import uuid
 #import gobject
 
 logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", filename="students.log", filemode="w", level=logging.INFO)
 
 now = datetime.datetime.now()
 
-global cur_model
 #global self.c_group
 # temporary list of grades. After 'Save' is pressed list is written into base
 global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark)]
@@ -35,15 +33,15 @@ global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_nu
 temp_attend = []
 
 global debug
-#debug = False
-debug = True
 
 class Conduit:
     '''Inspect students' attendance and grades, personal info'''
 
-    def __init__(self):
+    def __init__(self, cm=None):
 
-        cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
+        self.cur_model = cm
+
+#        cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
 
         self.c_group = config.get('Settings', 'default_c_group')
 
@@ -213,7 +211,7 @@ class Conduit:
         res.extend(cur.fetchall())
         cur.execute('select date from tests')
         res.extend(cur.fetchall())
-        cur.execute('select date from grades')
+        cur.execute('select date from grades') # not sure this is nesessary
         res.extend(cur.fetchall())
         
         cur.close()
@@ -292,7 +290,7 @@ class Conduit:
         # list of all student names (s_num, s_name)
         full_st_l = self.exec_sql(cm)
 
-        cur.close()
+#        cur.close()
        
         res = [] # (s_num, [col, True/False], L/N, comment)
 
@@ -499,12 +497,14 @@ class Conduit:
 
         # list of graded students with their info (including grades)
         # dates - из grades (т.е. дата оценки, а не события!)
-        cur.execute('select grades.s_num, s_name, mark, date, event from grades join students on grades.s_num=students.s_num')
+#        cur.execute('select grades.s_num, s_name, mark, date, event from grades join students on grades.s_num=students.s_num')
+        cur.execute('select grades.s_num, s_name, mark, date, e_name, e_num from grades join students on grades.s_num=students.s_num')
 
         # graded - list of all grades (separately)
         graded = cur.fetchall()
 
-        cols = self.get_dates()[2]
+#        cols = self.get_dates()[2] # "russian" - 02-02-2016. Why?
+        cols = self.get_dates()[0] # Y-m-d format 
 #        print 'cols', cols
 
         # std_l - list of data (including all grades) for each student: 
@@ -514,8 +514,8 @@ class Conduit:
 
         ### get date-columns, get all marks and corresponding columns for every student
         for i in graded:
-            sw = 0
-            cnt = 1                
+            sw = 0 # switch...
+            cnt = 1 # count of grades
 
             for t in range(len(cols)):
                 cnt += 2 # column number for grade
@@ -556,17 +556,46 @@ class Conduit:
                         else:
                             tmp[i] = str(j)
 #                    print st, tmp
-#                    logging.info('student %s, tail %s', st, tmp)
+                    logging.info('student %s, tail %s', st, tmp)
                     # вставляем отсутствующих (True/False)
                     while tmp:
                         res_ls.extend(tmp.popitem()) # be careful! get keyerror if tmp is empty
+#            for rr in res_ls:
+#                print 'new row', rr
             self.model.set(*res_ls)
         cur.close()
 
     def change_wk_model(self):
         ''' change working model for main window '''
-        pass
         # remove columns, insert, set other model
+        for x in self.tv.get_columns():
+            self.tv.remove_column(x)
+
+        # 2. get new columns
+        if self.cur_model == '1':
+            print 'current model is short'
+            columns = self.insert_columns(self.get_dates())
+            for col in columns:
+                # get cell_renderer
+                self.tv.append_column(col)
+#            self.ins_main() # this doubles rows
+            self.tv.set_model(self.model)
+            self.cur_model = '0'
+
+        # set different model for clean TV
+        elif self.cur_model == '0':
+            print 'current model is long'
+            columns = self.make_wk_columns()
+            for col in columns:
+                # get cell_renderer
+                self.tv.append_column(col)
+#            self.ins_wk_main(self.w_model) # this doubles rows
+        # set different model for clean TV
+            self.tv.set_model(self.w_model)
+            self.cur_model = '1'
+
+# TODO: filter doesnt work after switching. 
+# Have to refresh model before setting to TV
 
     def vis(self, model, itr):
         """Callback for the model-filter in Viewer.
@@ -1526,21 +1555,6 @@ class Conduit:
                 break
 
         print 'while cycle ended'
-        # save to base
-#        if self.rem_confirm('Save new event list?'): # TODO: confirmation after _all_ changes done! Save => separate callback
-#            e_name = self.combo.get_active_text() 
-#            for n in range(len(model)):
-#                vals = model.get(model.get_iter(n), 0, 1, 2, 3) # make separate for essays
-#                if e_name == 'essays':
-#                    # TODO: возможно стоит сделать тоже
-#                    print 'make new essay, delete old, don\'t be lazy'
-##                    enddate = self.get_enddate(vals[1])
-##                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
-#                else:
-##                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
-#                    comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
-#                    print comm
-#                    self.exec_sql(comm)
 
     def save_events(self, model):
         '''Save changes in Events() to base'''
@@ -1616,7 +1630,7 @@ class Conduit:
         return tail
 
     def get_avg(self, s_num):
-        ''' get average mark/mark cout '''
+        ''' get average mark/mark count '''
 
         tail = self.get_tail()
 
@@ -2362,8 +2376,8 @@ class Events(Conduit):
 class Viewer(Conduit):
     ''' Main window '''
 
-    def __init__(self):
-        Conduit.__init__(self)
+    def __init__(self, cm):
+        Conduit.__init__(self, cm)
 
 
 #        self.b_sw = b_sw # switch between bases from args: 1, 2
@@ -2407,14 +2421,14 @@ class Viewer(Conduit):
         self.modelfilter.set_visible_func(self.vis) # visible function call
         # make cols in model
 ######### model for 'long view' ##########
-#        strs = [int, str, 'gboolean']
-#        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
-#            strs.append(str) # set types for text column
-#            strs.append('gboolean') # set types for color column
+        strs = [int, str, 'gboolean']
+        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
+            strs.append(str) # set types for text column
+            strs.append('gboolean') # set types for color column
 #
 ##        logging.info('strs %s', len(strs)) # количество столбцов в модели
 #        # model for 'regular view'
-#        self.model = gtk.ListStore(*strs) # method to create dynamic model
+        self.model = gtk.ListStore(*strs) # method to create dynamic model
 #        self.tv = gtk.TreeView(self.model)
 ##########################################
         self.tv = gtk.TreeView(self.w_model)
@@ -2505,7 +2519,7 @@ class Viewer(Conduit):
         self.tv.connect('row-activated', self.edited_cb)
 #        window2.connect('key_press_event', self.redraw_cb)
 
-#        self.ins_main()
+        self.ins_main()
 
 #        for i in range(len(self.w_model)):
 #            itr = self.w_model.get_iter(i) 
@@ -2605,11 +2619,13 @@ class Viewer(Conduit):
         
         date_ls = date[0]
         len_d = date[1]
+        res_cols = []
 
         cell1 = gtk.CellRendererText()
         cell1.set_property('font', 'FreeSans 12')
         self.column1 = gtk.TreeViewColumn('s_num', cell1, text=0) 
-        self.tv.append_column(self.column1)
+        res_cols.append(self.column1)
+#        self.tv.append_column(self.column1)
 
 
         cell2 = gtk.CellRendererText()
@@ -2617,7 +2633,7 @@ class Viewer(Conduit):
         cell2.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
         self.column2 = gtk.TreeViewColumn('student', cell2, text=1) 
         self.column2.set_sort_column_id(1)
-        self.tv.append_column(self.column2)
+        res_cols.append(self.column2)
 
         a1 = gtk.gdk.Color('#ea7e58')
         # начинаем с 3й колонки, длина = количество дат + 2
@@ -2630,14 +2646,17 @@ class Viewer(Conduit):
             cell.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
             cell.set_property('cell-background', a1) # COLOR for Absent students (light red?). False/True - in Liststore col
             
-            self.column = gtk.TreeViewColumn(date_ls[cnt].strftime("%d-%m-%Y"), cell)
+#            self.column = gtk.TreeViewColumn(date_ls[cnt].strftime("%d-%m-%Y"), cell)
+            self.column = gtk.TreeViewColumn(date_ls[cnt], cell)
             self.column.set_attributes(cell, text=i, cell_background_set=(i+1))
 
-            self.tv.append_column(self.column)
+            res_cols.append(self.column)
 
             cnt += 1 
 
-        self.tv.connect('row-activated', self.on_click)
+        return res_cols
+
+#        self.tv.connect('row-activated', self.on_click)
 
 class Stud_info(Conduit):
     ''' Main window '''
@@ -2783,6 +2802,7 @@ if __name__ == '__main__':
 
     parser.add_option("-s", "--switch", dest="switch", action="store", help="Switch between bases 1 and 2")
     parser.add_option("-c", "--config", dest="config", action="store", help="Get config from path")
+    parser.add_option("-d", "--debug", dest="debug", action="store_true", help="Debug this thing. self.date is set to specific date")
     (options, args) = parser.parse_args()
 
     if options.config: # for debugging (alternative paths and stuff)
@@ -2793,13 +2813,21 @@ if __name__ == '__main__':
     config = ConfigParser.ConfigParser()
     config.read(c_path)
 
+#    global cur_model
+    cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
+
+    if options.debug:
+        debug = True
+    else:
+        debug = False
+
     if options.switch:
         if options.switch == '1':
             b_name = config.get('Paths', 'stud_path1')
         elif options.switch == '2':
             b_name = config.get('Paths', 'stud_path2')
             print b_name
-        gstud = Viewer()
+        gstud = Viewer(cur_model)
     else:
         print "no options given, exiting"
         sys.exit(0)

@@ -200,13 +200,16 @@ class Conduit:
         conn = self.open_base()
         cur = conn.cursor()
         if tab == 'grades':
-            cur.execute('select s_name, event, date, mark from grades join students on grades.s_num = students.s_num')
+            # grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
+            cur.execute('select g_num, s_name, e_name, e_num, date, mark, grades.comment from grades join students on grades.s_num = students.s_num')
             res = cur.fetchall()
             pr = []
 #            print 'date', self.date
             pr.append(self.date + '\n')
-            for n, e, d, m in res:
-                ln = ' '.join([n, e, d, str(m)]) +'\n'
+            for a, b, c, d, e, f, g  in res:
+                if not g:
+                    g = ''
+                ln = ' '.join([a, b ,c, str(d), e, str(f), g]) +'\n'
                 pr.append(ln)
             if pr_b:
                 Writer.write_file('grades_dump', pr, 'a')
@@ -215,7 +218,7 @@ class Conduit:
                     print i.strip()
 
         elif tab == 'attendance':
-            cur.execute('select s_name, date, absence, comment from attendance join students on attendance.s_num = students.s_num')
+            cur.execute('select s_name, date, absence, attendance.comment from attendance join students on attendance.s_num = students.s_num')
             res = cur.fetchall()
             pr = []
             pr.append(self.date + '\n')
@@ -233,7 +236,7 @@ class Conduit:
             res = cur.fetchall()
             pr = []
             for a,b,c,d,e,f,j in res:
-                ln = ' '.join([str(a),b,c,d,e,f,j]) + '\n'
+                ln = '//'.join([str(a),b,c,d,e,f,j]) + '\n'
                 pr.append(ln)
             if pr_b:
                 Writer.write_file('students_dump', pr, 'a')
@@ -241,6 +244,22 @@ class Conduit:
                 for i in pr:
                     print i.strip()
 
+
+        elif tab == 'lectures' or tab == 'essays' or tab == 'seminars' or tab == 'tests':
+            print tab
+            # lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
+            cur.execute('select * from ' + tab)
+            res = cur.fetchall()
+            pr = []
+            for a, b, c, d in res:
+#                ln = ' '.join([str(a),b,c.decode('utf-8'),d.decode('utf-8')]) + '\n'
+                ln = ' '.join([str(a),b,c,d]) + '\n'
+                pr.append(ln)
+            if pr_b:
+                Writer.write_file(tab + '_dump', pr, 'a')
+            else:
+                for i in pr:
+                    print i.strip()
 
 
 
@@ -304,7 +323,7 @@ if __name__ == '__main__':
         elif options.print_b:
             # print base entries into text file
             main_f = Conduit(args[0])
-            main_f.pr_base(False, args[1])
+            main_f.pr_base(False, args[1]) # False - do not write to file
 
         elif options.write:
             # outbut from base
