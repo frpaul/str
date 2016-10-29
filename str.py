@@ -877,7 +877,7 @@ class Conduit:
                 model = self.aa_model
                 refs = []
                 for i in range(len(model)):
-                    x = gtk.TreeRowReference(model, i)
+                    x = gtk.TreeRowReference(model, i) # have to use refs, else iters mess up after rows are deleted
                     refs.append(x)
 
                 for r in refs:
@@ -894,25 +894,33 @@ class Conduit:
                         cmt = v[6]
                         # grades: (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
                         if mk:
-                            e_id = self.exec_sql("select e_id from essays where topic='" + top + "'")[0][0]
-                            s_num = self.exec_sql("select s_num from students where s_name='" + s_name + "'")[0][0]
-                            s_num = int(s_num)
-                            e_id = int(e_id)
+                            if dl: # there is a delivery date set
+                                # bad. Should have used model to keep e_id and s_num
+                                e_id = self.exec_sql("select e_id from essays where topic='" + top + "'")[0][0]
+                                s_num = self.exec_sql("select s_num from students where s_name='" + s_name + "'")[0][0]
+                                s_num = int(s_num)
+                                e_id = int(e_id)
 
-                            if cmt:
-                                cmt = cmt.decode('utf-8')
-                            cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
-                                            # text, int, text, int, text, real, text
-                            self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
+                                if cmt:
+                                    cmt = cmt.decode('utf-8')
+                                cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
+                                                # text, int, text, int, text, real, text
+                                self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
 
-                            if cmt:
-                                cmt = "'" + cmt + "'"
+                                if cmt:
+                                    cmt = "'" + cmt + "'"
+                                else:
+                                    cmt = 'NULL'
+
+#                                print 'curr delivery=', dl
+#                            cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
+                                cm = "update assignments set mark=" + mk + ", delivered='" + dl + "', comment=" + cmt + " where a_num='" + a_num + "'"
+#                                print cm
+                                self.exec_sql(cm)
+
+                                model.remove(new_itr)
                             else:
-                                cmt = 'NULL'
-                            cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
-                            self.exec_sql(cm)
-
-                            model.remove(new_itr)
+                                Popup('Set delivery date, please')
 
                         else:
                             if not dl or dl == ' ':
