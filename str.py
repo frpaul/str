@@ -35,13 +35,11 @@ temp_attend = []
 global debug
 
 class Conduit:
-    '''Inspect students' attendance and grades, personal info'''
+    '''Callbacks and other functions.'''
 
     def __init__(self, cm=None):
 
         self.cur_model = cm
-
-#        cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
 
         self.c_group = config.get('Settings', 'default_c_group')
 
@@ -61,12 +59,7 @@ class Conduit:
         else:
             self.date = now.strftime("%Y-%m-%d")
 
-        # get time
-        # to set STR to working condition 1) set self.date to strftime here, 2) do the same in choose_cl()
-
         self.ev_names = ['lectures', 'essays', 'seminars', 'tests']
-
-#        self.find_number = re.compile(u'^\d.*', re.U) # find if new_text is mark
 
         self.new_gr = False # There is a new grade in Details (not in temp_grades yet)
         self.new_ev = False # There is a new event in Events (not in the base yet)
@@ -74,7 +67,7 @@ class Conduit:
         # get years and current semester
         self.year_ls = self.get_years() # (year1, year2, semester)
         self.semester = self.year_ls[2]
-
+    
     def rem_confirm(self, txt):
         ''' Confirmation dialog for removing stuff '''
 
@@ -198,8 +191,6 @@ class Conduit:
     def get_dates(self):
         # get from base all unic dates of events AND grades
 
-        # TODO: add all other events (tests, essays)
-
         conn = self.open_base()
         cur = conn.cursor()
 #        cur.execute('select date from lectures join seminars on lectures.date!=seminars.date')
@@ -216,7 +207,6 @@ class Conduit:
         
         cur.close()
 
-#        out = res[0].sort()
         out = []
         for i in res:
             z = i[0]
@@ -2784,7 +2774,6 @@ class Stud_info(Conduit):
 
 class Popup:
     def __init__(self, text=None):
-#        self.title = ""
         self.text = text
         dialog = gtk.Dialog(title='warning')
         label = gtk.Label(self.text)
@@ -2792,6 +2781,100 @@ class Popup:
         label.show()
         dialog.show()
 
+#class Wiz(Conduit):
+class Wiz():
+    ''' A wizard to fill in all info,
+     needed for the application to start. Main window
+
+    '''
+    def __init__(self):
+#        Conduit.__init__(self)
+        window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        window.set_resizable(True)
+        window.set_border_width(10)
+        window.set_size_request(250, 200)
+
+        window.set_title("Studentus")
+
+        box1 = gtk.VBox(False, 0)
+        window.add(box1)
+        box1.show()
+
+        self.label = gtk.Label('Welcome to the STR.\nThere is no database available.\nDo you whant to create it?')
+        self.button1 = gtk.Button(None, gtk.STOCK_CANCEL)
+        self.button2 = gtk.Button(None, gtk.STOCK_OK)
+
+        box1.pack_start(self.label, True, True, 0)
+        box2 = gtk.HBox(False, 0)
+        box2.show()
+        box1.pack_start(box2, False, False, 0)
+        box2.pack_start(self.button1, True, False, 0)
+        box2.pack_start(self.button2, True, False, 0)
+        self.label.show()
+        self.button1.show()
+        self.button2.show()
+        window.show()
+        window.connect("destroy", self.destroy_cb) 
+        self.button1.connect('clicked', self.destroy_cb)
+        self.button2.connect('clicked', self.get_bn)
+
+    def destroy_cb(self, widget):
+        gtk.main_quit()
+
+    def get_bn(self, button):
+        res = self.insert_bn()
+        if res:
+            b_path = os.path.join(os.path.expanduser('~'), res + '.db')
+#            print b_path
+            self.create_base(b_path)
+# write to config!
+        else:
+            print 'no result'
+
+    def insert_bn(self):
+        ''' A Dialog for Wizard - choose base name '''
+
+        z_dialog = gtk.Dialog("Base name", None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+        self.z_entry = gtk.Entry()
+        z_dialog.vbox.pack_start(self.z_entry, True, True, 0)
+        self.z_entry.show()
+        z_dialog.show()
+
+        response = z_dialog.run()
+        if response == -3: # resp accepted
+#            get data from Entry
+            res = self.z_entry.get_text()
+#            print res
+            z_dialog.destroy()
+            return res
+
+#            self.destroy_cb
+#            gtk.main_quit()
+#            return True
+#            return None
+        else:
+            z_dialog.destroy()
+            return
+
+    def create_base(self, b_path):
+
+        conn = sqlite3.connect(b_path)
+        cur = conn.cursor()
+
+        command = "CREATE TABLE students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT)"
+        command2 = "CREATE TABLE attendance (a_num TEXT, s_num INTEGER, date TEXT, absence TEXT, comment TEXT)"
+        command3 = "CREATE TABLE grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
+        command4 = "CREATE TABLE lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
+        command5 = "CREATE TABLE seminars (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
+        command6 = "CREATE TABLE tests (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
+        command7 = "CREATE TABLE essays (e_id INTEGER PRIMARY KEY, date TEXT, enddate TEXT, topic TEXT, comment TEXT)"
+        command8 = 'CREATE TABLE notes (c_num TEXT, s_num INTEGER, date TEXT, comment TEXT)' # TODO: make "fulfilled" or "acted_on" column
+        command9 = 'CREATE TABLE assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)'
+        for com in [command, command2, command3, command4, command5, command6, command7, command8, command9]:
+            cur.execute(com) # TODO: executescript()
+
+        cur.close()
 
 def main():
     gtk.main()
@@ -2805,7 +2888,7 @@ if __name__ == '__main__':
     global b_name
 
     from optparse import OptionParser
-    usage = "usage: %prog [options] filename"
+    usage = "usage: %prog [-d] [-c config] -s base_name"
     parser = OptionParser(usage=usage)
 
     parser.add_option("-s", "--switch", dest="switch", action="store", help="Switch between bases 1 and 2")
@@ -2828,17 +2911,28 @@ if __name__ == '__main__':
         debug = True
     else:
         debug = False
+# TODO: Здесь нужно проверить валидность путей к базам (сколько их д.б.?,  как нумеровать
+    b_name = config.get('Paths', 'stud_path1')
+    if not b_name:
+        print 'no base available, starting a wizard'
+        # start a wizard
+        wz = Wiz()
 
-    if options.switch:
-        if options.switch == '1':
-            b_name = config.get('Paths', 'stud_path1')
-        elif options.switch == '2':
-            b_name = config.get('Paths', 'stud_path2')
-            print b_name
-        gstud = Viewer(cur_model)
     else:
-        print "no options given, exiting"
-        sys.exit(0)
+        # check for validity
+        gstud = Viewer(cur_model)
+
+#    if options.switch:
+#        if options.switch == '1':
+#            b_name = config.get('Paths', 'stud_path1')
+#        elif options.switch == '2':
+#            b_name = config.get('Paths', 'stud_path2')
+#            print b_name
+#        gstud = Viewer(cur_model)
+#    else:
+#        print "no options given, exiting"
+#        sys.exit(0)
+
     main()
 
 # TODO: В Events ставим курсор на текущую дату (если есть) или в начало списка, если нету
