@@ -17,7 +17,6 @@ import ConfigParser
 import types
 import logging
 import datetime
-#import gobject
 
 logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", filename="students.log", filemode="w", level=logging.INFO)
 
@@ -25,8 +24,7 @@ now = datetime.datetime.now()
 
 #global self.c_group
 # temporary list of grades. After 'Save' is pressed list is written into base
-global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark)]
-#        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
+global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
 temp_grades = []
 # temp list of attendance
 global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_num - hash
@@ -194,6 +192,7 @@ class Conduit:
         conn = self.open_base()
         cur = conn.cursor()
 #        cur.execute('select date from lectures join seminars on lectures.date!=seminars.date')
+        print 'base run', b_name
         cur.execute('select date from lectures')
         res = cur.fetchall()
         cur.execute('select date from seminars')
@@ -2827,7 +2826,10 @@ class Wiz():
             b_path = os.path.join(os.path.expanduser('~'), res + '.db')
 #            print b_path
             self.create_base(b_path)
-# write to config!
+# TODO: write the path to str directory to config! Check str directory for existing bases
+# idea is simple - no more separate addresses for bases in the config. 
+# Main programm checks out the STR dir, shows the _default base_ (if set in config)
+# Or suggests a choise of the base to show through the menu (if number of bases > 1)
         else:
             print 'no result'
 
@@ -2861,19 +2863,17 @@ class Wiz():
 
         conn = sqlite3.connect(b_path)
         cur = conn.cursor()
-
-        command = "CREATE TABLE students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT)"
-        command2 = "CREATE TABLE attendance (a_num TEXT, s_num INTEGER, date TEXT, absence TEXT, comment TEXT)"
-        command3 = "CREATE TABLE grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
-        command4 = "CREATE TABLE lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
-        command5 = "CREATE TABLE seminars (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
-        command6 = "CREATE TABLE tests (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT)"
-        command7 = "CREATE TABLE essays (e_id INTEGER PRIMARY KEY, date TEXT, enddate TEXT, topic TEXT, comment TEXT)"
-        command8 = 'CREATE TABLE notes (c_num TEXT, s_num INTEGER, date TEXT, comment TEXT)' # TODO: make "fulfilled" or "acted_on" column
-        command9 = 'CREATE TABLE assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)'
-        for com in [command, command2, command3, command4, command5, command6, command7, command8, command9]:
-            cur.execute(com) # TODO: executescript()
-
+        cur.executescript("""
+                CREATE TABLE students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT);
+                CREATE TABLE grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT);
+                CREATE TABLE lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE seminars (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE tests (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE essays (e_id INTEGER PRIMARY KEY, date TEXT, enddate TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE notes (c_num TEXT, s_num INTEGER, date TEXT, comment TEXT);
+                CREATE TABLE assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT);
+        """)
+        conn.commit()
         cur.close()
 
 def main():
