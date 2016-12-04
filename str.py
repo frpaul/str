@@ -192,7 +192,6 @@ class Conduit:
         conn = self.open_base()
         cur = conn.cursor()
 #        cur.execute('select date from lectures join seminars on lectures.date!=seminars.date')
-        print 'base run', b_name
         cur.execute('select date from lectures')
         res = cur.fetchall()
         cur.execute('select date from seminars')
@@ -2865,6 +2864,7 @@ class Wiz():
         cur = conn.cursor()
         cur.executescript("""
                 CREATE TABLE students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT);
+                CREATE TABLE attendance (a_num TEXT, s_num INTEGER, date TEXT, absence TEXT, comment TEXT);
                 CREATE TABLE grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT);
                 CREATE TABLE lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
                 CREATE TABLE seminars (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
