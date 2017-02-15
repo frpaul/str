@@ -12,6 +12,7 @@ import sys
 import re
 import sqlite3
 import uuid
+import tarfile
 
 import ConfigParser
 import types
@@ -143,6 +144,10 @@ class Conduit:
         elif (keyname == "u" or keyname == "Cyrillic_ghe") and event.state & gtk.gdk.CONTROL_MASK:
             Information()
 
+        # dump base(s), archivate, move
+        elif (keyname == "q" or keyname == "Cyrillic_shorti") and event.state & gtk.gdk.CONTROL_MASK:
+            self.arch(b_name)
+
     def reload_sh(self):
         '''reload short view'''
         for cc in gstud.tv.get_columns():
@@ -167,6 +172,40 @@ class Conduit:
         self.insert_columns(date_ls) # Doesn't return anything!!!
 #        self.tv.set_model(self.model)
         self.ins_main()
+
+    def arch(self, b_path):
+        ''' Dump base to file, archivate, move? '''
+
+        names = []
+        pf = ''
+        f_name = ''
+
+        name = os.path.basename(b_path)
+        print 'name', name
+
+        f_name = os.path.splitext(name)[0] + "_dump_(" + self.date + ').sql'
+        print f_name
+
+        conn = sqlite3.connect(b_path)
+
+        print 'writing dump', f_name
+        with open(f_name, 'w') as f:
+            for line in conn.iterdump():
+                f.write('%s\n' % line.encode('utf8'))
+
+        archname = 'str_dump_' + self.date + '.tgz'
+
+        print 'writing archive', archname
+
+        with tarfile.open(archname, "w:gz") as tar:
+            tar.add(f_name)
+            os.remove(f_name)
+
+# TODO: Стоит ли сделать сразу перемещение в папку архивов?
+# Возможно стоит ввести в конфиг строчку "arch_path" - путь, куда копировать архивы 
+#
+#        print 'moving archive', archname, 'to yadisk'
+#        os.rename(os.path.join(os.getcwd(), archname), os.path.join(os.path.expanduser('~'), 'yadisk', 'backups', archname))
 
     def get_years(self):
         dts = self.get_dates()[0]
@@ -2959,3 +2998,17 @@ if __name__ == '__main__':
 # TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
 # TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
 # TODO: В stud_info сделать Ctrl+n - добавление студента. (s_num, и active - обязательно)
+# TODO: 
+'''# TODO: Отключен --switch. Откуда брать пути к базам? Их должно быть неограниченное количество. 
+С+o (open base) - диалог open file - для добавления (новых) и просмотра старых баз. При сохранении, имя базы пишется в конфиг. Это можно сделать для текущей базы (отдельное меню base-info, где сказано - сохранена ли она в конфиге, кнопка сохранения).
+
+Переключаемся с помощью drop-down (combo) + С-b
+Читаем все имена баз из конфига, добавляем в combo.
+При переключении придется вытирать главное окно и загружать всю инфу из другой базы.
+
+Мораль - для возни с базами нужна отдельная ветка. Надо довести до ума Визард и включить обратно --switch, чтобы замержить в master. Уже накопилось коммитов.
+
+'''
+# TODO: 
+# TODO: 
+# TODO: 
