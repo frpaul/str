@@ -2950,7 +2950,7 @@ if __name__ == '__main__':
 # TODO: Перенести часть опций из str_tools (-c, -i, -r...)
 # TODO: нужна возможность отдельно импортировать lections, seminars
 # TODO: Удаление тем из Events (если еще нет в Grades)
-# TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
+# TODO: Постоянная длина колонки topic в Events (а то комментариев не видать)
 # TODO: При move up событий - всплывающее меню "concatenate/drop"
 # TODO: line 659 - what the??? Разберись, нужно ли сохранять attendace в модели. Странно это.
 # TODO: Разберись, нужен ли temp_grades (temp_attend можно оставить)
@@ -2958,3 +2958,4 @@ if __name__ == '__main__':
 # TODO: 
 # TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
 # TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
+# TODO: В stud_info сделать Ctrl+n - добавление студента. (s_num, и active - обязательно)
