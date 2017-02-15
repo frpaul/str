@@ -6,6 +6,7 @@ import os
 import sys
 import re
 import sqlite3
+import tarfile
 
 import logging
 import datetime
@@ -32,7 +33,7 @@ class Conduit:
             self.b_name = self.config.get('Paths', 'stud_path1')
         else:
             self.b_name = b_name
-        print 'b_name', self.b_name
+#        print 'b_name', self.b_name
 
         # get time
         self.date = now.strftime("%d_%m_%Y")
@@ -56,6 +57,42 @@ class Conduit:
             cur.execute(com) # TODO: executescript()
 
         cur.close()
+
+    def arch(self, *args):
+
+        names = []
+
+        for bs in args[0]: # files to process: >= 1 
+            name = os.path.basename(bs)
+            if name.startswith('sen'):
+                pf = 'sen'
+            elif name.startswith('min'):
+                pf = 'min'
+            
+            f_name = pf + "_dump_" + self.date + '.sql'
+
+            names.append(f_name)
+
+            conn = sqlite3.connect(bs)
+
+            print 'writing dump', f_name
+
+            with open(f_name, 'w') as f:
+                for line in conn.iterdump():
+                    f.write('%s\n' % line.encode('utf8'))
+
+        archname = 'str_dump_' + self.date + '.tgz'
+
+        print 'writing archive', archname
+
+        with tarfile.open(archname, "w:gz") as tar:
+            for n in names:
+                tar.add(n)
+                os.remove(n)
+
+        print 'moving archive', archname, 'to yadisk'
+
+        os.rename(os.path.join(os.getcwd(), archname), os.path.join(os.path.expanduser('~'), 'yadisk', 'backups', archname))
 
     def open_base(self):
         # should check if the base is already opened
@@ -81,6 +118,7 @@ class Conduit:
 #        cur.execute("INSERT INTO " + tab_name + " (s_num, s_name, email, phone, photo, class) VALUES (?,?,?,?,?,?);", data)
 #        cur.execute("INSERT INTO " + tab_name + " (s_name, email, phone, photo, class, comment) VALUES (?,?,?,?,?,?);", data)
         cur.execute("INSERT INTO " + tab_name + " (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
+# TODO: приделать к Stud_info. Обязательно пишем s_num, email, active - иначе не заведется
         conn.commit()
         cur.close()
 
@@ -312,6 +350,7 @@ if __name__ == '__main__':
     parser.add_option("-d", "--dryrun", dest="dryrun", action="store_true", help="Test stuff")
     parser.add_option("-l", "--line", dest="line", action="store_true", help="Read text from string, parse and insert into base")
     parser.add_option("-t", "--testsql", dest="testsql", action="store_true", help="Test SQL command")
+    parser.add_option("-a", "--archivate", dest="archivate", action="store_true", help="Dump bases, make archive, put into yadisk")
 
     (options, args) = parser.parse_args()
     if args:
@@ -319,6 +358,12 @@ if __name__ == '__main__':
             main_f = Conduit(args[0])
             # needs NO table name as an argument
             main_f.create_base()
+
+        elif options.archivate:
+            # make dump, archivate, put into yadisk dir
+            main_f = Conduit() # get all filenames
+#            main_f.arch(args[:-1], args[:1]) # False - do not write to file
+            main_f.arch(args) # False - do not write to file
 
         elif options.print_b:
             # print base entries into text file
