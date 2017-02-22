@@ -1177,12 +1177,9 @@ class Conduit:
             model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
             for pp in paths:
                 itr = model.get_iter(pp)
-#                val = model.get_value(itr, 0) # s_num
                 s_num = model.get_value(itr, 0) # s_num
         # assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)'
-#                out.append([str(uuid.uuid4())[:8], s_num, e_id, None, self.date, None, None])
                 out.append([str(uuid.uuid4())[:8], s_num, e_id, self.date])
-#            print out
             cm = 'insert into assignments (a_num, s_num, e_id, date) values (?,?,?,?)'
             for oo in out:
                 self.exec_sql(cm, oo)
@@ -2859,12 +2856,46 @@ class Wiz():
         gtk.main_quit()
 
     def get_bn(self, button):
-        res = self.insert_bn()
+        '''Make a new base dialog'''
+
+        res = self.insert_bn()  # returns base name
+        print 'New base name is:', res
+
         if res:
+            # TODO: User needs an option for a path.
+            # TODO: Write to config
             b_path = os.path.join(os.path.expanduser('~'), res + '.db')
 #            print b_path
             self.create_base(b_path)
-# TODO: write the path to str directory to config! Check str directory for existing bases
+
+# TODO: Пишем в конфиге дефолтную директорию для баз (по умолчанию - в .config/str/bases)
+# В меню этого не нужно - хотят, пусть в конфиге меняют.
+# При запуске проверяем эту директорию. Если ничего нету,
+
+# Пока ничего не перерисовываем, выбрать базу можно только при старте.
+
+# Если баз нет физически, сначала выводим (пустое) меню выбора "доступных баз", с чекбоксами. 
+# Кнопка "создать новую базу". Создаем новую базу с именем, данным юзером и помещаем ее в диру для баз, сразу помечаяем как рабочую в конфиге? - Спросить надо!
+# Если в конфиге нет списка рабочих баз - то же самое меню
+# Если есть рабочие базы и они есть физически (проверяем), то открываем меню "рабочих баз".
+
+# Если базы есть, но в конфиге нет списка "рабочих баз" (которые отображаются в меню выбора базы) - 
+# Выводим меню выбора из "доступных баз". Здесь можно в чекбоксах отметить базы,
+# которые будут загружаться в меню выбора по умолчанию - "рабочие базы".
+# то же меню, только без чекбоксов. Чтобы изменить набор - спец кнопка,
+# при нажатии должны появляться чекбоксы и "доступные базы".
+# Пишем отмеченные базы в список дефолтных (конфиг).
+
+# Выбрали "рабочие базы" среди доступных. Пишем в конфиг. 
+# Появляется меню "рабочие базы" (без чекбоксов)
+# Выбираем базу для загрузки, появляется главное окно. Ффу!
+
+# Заполнение базы данными: 
+# Меню для студентов: Хотите ввести данные студентов в ручную?
+# Хотите ввести данные из файла? => открываем меню студентов. С+n - новая строка.
+# Читать vcf или свой формат (имя, e-mail, телефон, путь к фотографии, активный =0/1).
+# разделенные двойным слэшем, дефис для незаполненных полей
+#            write the path to str directory to config! Check str directory for existing bases
 # idea is simple - no more separate addresses for bases in the config. 
 # Main programm checks out the STR dir, shows the _default base_ (if set in config)
 # Or suggests a choise of the base to show through the menu (if number of bases > 1)
@@ -2898,6 +2929,7 @@ class Wiz():
             return
 
     def create_base(self, b_path):
+        '''Create a new base'''
 
         conn = sqlite3.connect(b_path)
         cur = conn.cursor()
@@ -2998,7 +3030,11 @@ if __name__ == '__main__':
 # TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
 # TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
 # TODO: В stud_info сделать Ctrl+n - добавление студента. (s_num, и active - обязательно)
+# TODO: Перевести все диалоги и надписи на русский.
+# TODO: Перенести списки студентов, событий... в .config/str
 # TODO: 
+# TODO: README <= формат файла Events: l//2014-03-30//Тема занятия
+# Первый маркер может иметь значения: l(ecture), s(eminar), e(ssay), t(est)
 '''# TODO: Отключен --switch. Откуда брать пути к базам? Их должно быть неограниченное количество. 
 С+o (open base) - диалог open file - для добавления (новых) и просмотра старых баз. При сохранении, имя базы пишется в конфиг. Это можно сделать для текущей базы (отдельное меню base-info, где сказано - сохранена ли она в конфиге, кнопка сохранения).
 
@@ -3009,6 +3045,3 @@ if __name__ == '__main__':
 Мораль - для возни с базами нужна отдельная ветка. Надо довести до ума Визард и включить обратно --switch, чтобы замержить в master. Уже накопилось коммитов.
 
 '''
-# TODO: 
-# TODO: 
-# TODO: 
