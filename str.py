@@ -839,6 +839,20 @@ class Conduit:
                 # set different model for clean TV
                 self.e_tv.set_model(self.e_models[i])
 
+    def ins_test(self, e_name, e_num):
+        ''' insert info into Test_menu '''
+
+        cm = 'select s_num, s_name from students where s_num not in (select s_num from grades where grades.e_name="' + e_name + '" and grades.e_num="' + e_num + '")'
+ 
+        s_ls = self.exec_sql(cm)
+
+#        print s_ls
+        out = []
+        for r in s_ls:
+            itr = self.t_model.append()
+            out = [itr, 0, r[0], 1, r[1], 2, '', 3, '']
+            self.t_model.set(*out)
+
     def ins_assign(self):
         ''' insert info into Assignments '''
 
@@ -852,10 +866,6 @@ class Conduit:
                 s_name = res2[0][0]
                 topic = self.get_topic(('essays', aa[2]))[1]
                 self.aa_model.set(itr, 0, aa[0], 1, s_name, 2, topic, 3, aa[3], 4, aa[4], 5, aa[5], 6, aa[6])
-#            print res2
-#        else:
-#            itr = self.aa_model.append()
-#            self.aa_model.set(itr, 0, '', 1, '', 2, '', 3, '', 4, '', 5, '', 6, '')
 
     def ins_events(self, mod, evt):
         if mod.get_n_columns() > 4:
@@ -868,6 +878,39 @@ class Conduit:
                 mod.set(iter, 0, ev[0], 1, ev[1], 2, ev[2], 3, ev[3])
 
         return mod
+
+    def test_save(self, widget, event, ev, dt):
+        
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        if (keyname == "s" or keyname == "Cyrillic_yeru") and event.state & gtk.gdk.CONTROL_MASK: 
+            # idea1: while True; get_iter_next
+            if self.rem_confirm('Save data?'):
+                model = self.t_model
+                refs = []
+                for i in range(len(model)):
+                    x = gtk.TreeRowReference(model, i) # have to use refs, else iters mess up after rows are deleted
+                    refs.append(x)
+
+                for r in refs:
+#                    p = r.get_path()
+                    new_itr = model.get_iter(r.get_path())
+                    if new_itr:
+                        v = model.get(new_itr, 0, 1, 2, 3) # s_num, s_name, mark and comment
+                        s_num = v[0]
+                        s_name = v[1]
+                        mk = v[2]
+                        cmt = v[3]
+                        # grades: (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT)"
+                        if mk:
+                            s_num = int(s_num)
+#                            e_id = int(e_id)
+
+                            if cmt:
+                                cmt = cmt.decode('utf-8')
+                            cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
+                                            # text, int, text, int, text, real, text
+                            self.exec_sql(cm, [str(uuid.uuid4())[:8], s_num, ev[0], ev[1], dt, mk, cmt])
+                            model.remove(new_itr)
 
     def assign_save(self, widget, event):
         keyname = gtk.gdk.keyval_name(event.keyval)
@@ -906,7 +949,7 @@ class Conduit:
                                 cm = "insert into grades (g_num, s_num, e_name, e_num, date, mark, comment) values (?,?,?,?,?,?,?)"
                                                 # text, int, text, int, text, real, text
                                 self.exec_sql(cm, [a_num, s_num, 'essays', e_id, dt, mk, cmt])
-
+                                # Дальше - код, который пишет в assignments
                                 if cmt:
                                     cmt = "'" + cmt + "'"
                                 else:
@@ -935,6 +978,17 @@ class Conduit:
                             cm = "update assignments set delivered=" + dl + ", comment=" + cmt + " where a_num='" + a_num + "'"
                             self.exec_sql(cm)
 
+    def test_set(self, cell, path, new_text, col):
+        '''Callback for Assignments, when row is edited'''
+
+        iter_cur = self.t_model.get_iter(path)
+        self.t_model.set(iter_cur, col, new_text)
+        # fool proof:
+        if col == 3: # comment
+            mk = self.t_model.get_value(iter_cur, 2) # delivered
+            if not mk:
+                Popup('mark is not set!')
+
     def assign_set(self, cell, path, new_text, col):
         '''Callback for Assignments, when row is edited'''
 
@@ -948,23 +1002,10 @@ class Conduit:
 
     def event_set(self, tv, path, column, g_path):
         '''Callback for Entry - when row with event is chosen'''
+        model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
 
-# TODO: а что если Entry вызван из Viewer, а не из Details?
-# можно просто сделать потомка от Entry
-        cur_mod = tv.get_model()
-
-        iter_cur = cur_mod.get_iter(path)
-        e_num = cur_mod.get_value(iter_cur, 0)
-#        e_date = cur_mod.get_value(iter_cur, 1) # дата события
-        e_top = cur_mod.get_value(iter_cur, 2)
-        e_word = gstud.cur_e_name + ' ' + str(e_num) # что за ерунда? cur_e_name?
-
-        iter_g = gstud.grada.mod_g.get_iter(g_path)
-        g_date = gstud.grada.mod_g.get_value(iter_g, 2) # дата оценки
-        #  mod_g: g_num, grade, date, event (full), topic, saved, index=None (its not in temp_grades)
-        gstud.grada.mod_g.set(iter_g, 1, None, 2, g_date, 3, e_word, 4, e_top)
-
-#        destroy_cb(self) # можно сделать два объекта Events() c разными коллбэками. Один - с дестроем, другой - без
+#        print gstud.cur_e_name, paths[0][0] + 1
+        Test_menu(gstud.cur_e_name, paths[0][0] + 1)
 
     def open_ev(self, tv, g_path, column):
         ''' callback for Details() when clicked on date - open Events, choose event '''
@@ -1126,7 +1167,7 @@ class Conduit:
                 comment = line[6]
 
                 cm = 'select topic from ' + e_name + ' where e_id="' + str(e_num) + '"' 
-                print 'cm', cm
+#                print 'cm', cm
                 event_l = self.exec_sql(cm)[0]
                 res.append([line[0], line[5], line[2], e_word, event_l[0], comment, True]) # g_num, mark, date, event (full), topic, saved, index
             res.extend(g_temp_ls) # добавим временные оценки к взятым из базы
@@ -2064,6 +2105,92 @@ class Attendance(Conduit):
 #       Добавление нового прогула (ctr+n). 
 #       Редактирование поля L/N. Дату лучше не трогать
 
+class Test_menu(Conduit):
+    ''' A menu to batch-grade for seminars and tests '''
+
+    def __init__(self, e_name, e_id): 
+        Conduit.__init__(self)
+
+        t_date, t_top = self.get_topic([e_name, e_id])
+
+        window_t = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        window_t.set_resizable(True)
+        window_t.set_border_width(2)
+        window_t.set_size_request(950, 450)
+
+        window_t.set_title('Grade students')
+
+        a_box1 = gtk.VBox(False, 0)
+        window_t.add(a_box1)
+        a_box1.show()
+        a_box2 = gtk.VBox(False, 10)
+        a_box2.set_border_width(2)
+
+        a_box1.pack_start(a_box2, True, True, 0)
+        a_box2.show()
+
+        aa_sw = gtk.ScrolledWindow()
+        aa_sw.set_border_width(2)
+        aa_sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+ 
+        self.t_model = gtk.ListStore(str, str, str, str)
+        self.modelfilter = self.t_model.filter_new()
+
+        self.ins_test(e_name, str(e_id)) # insert info into model
+
+        self.t_tv = gtk.TreeView()
+        self.t_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
+        self.selection = self.t_tv.get_selection()
+
+#        self.a_tv.set_model(self.a_model)
+        self.t_tv.set_model(self.modelfilter)
+        aa_sw.add(self.t_tv)
+
+        cols = self.make_t_cols()
+        for i in cols:
+            self.t_tv.append_column(i)
+
+        self.label = gtk.Label(e_name + ' ' + str(e_id) + ' ' + t_top)  # set topic
+        a_box2.pack_start(self.label, False, False, 0)
+        a_box2.pack_start(aa_sw, True, True, 0)
+
+        self.label.show()
+        self.t_tv.show()
+        aa_sw.show_all()
+        window_t.show()
+
+        window_t.connect('key_press_event', self.test_save, [e_name, e_id], t_date) # Ctrl+n, s
+
+    def make_t_cols(self):
+        ''' Make them when reloading Test_menu TV '''
+        res = []
+
+        cell0 = gtk.CellRendererText()
+        cell0.set_property('font', 'FreeSans 12')
+        column0 = gtk.TreeViewColumn('#', cell0, text=0) 
+        res.append(column0)
+
+        cell1 = gtk.CellRendererText()
+        cell1.set_property('font', 'FreeSans 12')
+        column1 = gtk.TreeViewColumn('Name', cell1, text=1) 
+        res.append(column1)
+
+        cell5 = gtk.CellRendererText()
+        cell5.set_property('font', 'FreeSans 12')
+        cell5.set_property('editable', True)
+        cell5.connect('edited', self.test_set, 2)
+        column5 = gtk.TreeViewColumn('mark', cell5, text=2) 
+        res.append(column5)
+
+        cell6 = gtk.CellRendererText()
+        cell6.set_property('font', 'FreeSans 12')
+        cell6.set_property('editable', True)
+        cell6.connect('edited', self.test_set, 3)
+        column6 = gtk.TreeViewColumn('commment', cell6, text=3) 
+        res.append(column6)
+
+        return res
+
 class Choose_students(Conduit):
     '''GUI for assignments: essays. and personal quests '''
 
@@ -2137,7 +2264,7 @@ class Choose_students(Conduit):
 class Assign(Conduit):
     '''GUI for assignments: essays. and personal quests '''
 
-    def __init__(self, stud_ls=None):
+    def __init__(self, stud_ls=None): # stud_ls не изспользуется нигде. TODO: delete
         Conduit.__init__(self)
 
         window_a = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -2327,6 +2454,7 @@ class Events(Conduit):
 
         window_e.connect('key_press_event', self.event_n) # Ctrl+n, s
 
+# эта штука не работает - зовет какой-то старый grada
         self.e_tv.connect('row-activated', self.event_set, g_path) # выбираем ряд для вставки в Details
 
         self.combo.connect("changed", self.choose) # комбо с названиями таблиц: lectures, etc.
@@ -2864,3 +2992,10 @@ if __name__ == '__main__':
 # TODO: 
 # TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
 # TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
+
+# TODO: переделать event_set - зовет старый метод grada. Или выкинуть. Переназначить Enter на Test_menu
+
+# проблема: умеет писать в Assignments только эссе! А надо еще семинары и тесты.
+# создадим меню (без таблицы), в котором можно быстро проставить оценки за семинары и тесты
+# надо заглушку в ins_assign чтобы нельзя было засунуть ничего кроме эссе.
+# Придумаем, как загружать в Test_menu только тех студентов, у которых нет оценки по данному событию
