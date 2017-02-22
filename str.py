@@ -23,10 +23,8 @@ logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", filename="st
 
 now = datetime.datetime.now()
 
-#global self.c_group
 # temporary list of grades. After 'Save' is pressed list is written into base
-global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark)]
-#        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
+global temp_grades # temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
 temp_grades = []
 # temp list of attendance
 global temp_attend # temp_ attend: [a_num, s_num, date, absence, comment] # a_num - hash
@@ -41,8 +39,6 @@ class Conduit:
 
         self.cur_model = cm
 
-#        cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
-
         self.c_group = config.get('Settings', 'default_c_group')
 
         self.start_dialog_on = bool(int(config.get('Settings', 'start_dialog_on')))
@@ -50,23 +46,12 @@ class Conduit:
         self.due = config.get('Settings', 'essays_due_time')  # Time for delivering essays 2 weeks.
 
         if debug:
-#           self.date = now.strftime("%Y-%m-%d")
-#           self.date = '2015-09-01'
-#           self.date = '2015-09-08'
-#           self.date = '2015-12-29'
 #           self.date = '2016-01-26'
             self.date = '2016-02-02'
-#           self.date = '2016-02-09'
-#           self.date = '2016-02-16'
         else:
             self.date = now.strftime("%Y-%m-%d")
 
-        # get time
-        # to set STR to working condition 1) set self.date to strftime here, 2) do the same in choose_cl()
-
         self.ev_names = ['lectures', 'essays', 'seminars', 'tests']
-
-#        self.find_number = re.compile(u'^\d.*', re.U) # find if new_text is mark
 
         self.new_gr = False # There is a new grade in Details (not in temp_grades yet)
         self.new_ev = False # There is a new event in Events (not in the base yet)
@@ -91,7 +76,6 @@ class Conduit:
         if temp_grades or temp_attend:
             dialog = gtk.Dialog('Save into base?', None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_UNDO, gtk.RESPONSE_NONE, gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
             response = dialog.run()
-#        print response
             if response == -3: # resp accepted
                 self.save_into_b()
                 dialog.destroy()
@@ -122,9 +106,6 @@ class Conduit:
         elif (keyname == "c" or keyname == "Cyrillic_es") and event.state & gtk.gdk.CONTROL_MASK: #details of a student's grades and attend
             self.combo_b.grab_focus() # strange thing to do
 
-#        elif (keyname == "r" or keyname == "Cyrillic_k") and event.state & gtk.gdk.CONTROL_MASK:
-#            self.reload_ln()
-
         # Get students info menu
         elif (keyname == "i" or keyname == "Cyrillic_sha") and event.state & gtk.gdk.CONTROL_MASK:
             Stud_info()
@@ -144,7 +125,6 @@ class Conduit:
             iter_v = model.get_iter(path[0])
             s_num = model.get_value(iter_v, 0) # s_num instead of s_name
             s_name = model.get_value(iter_v, 1) # s_name
-            print 's_num', s_num, s_name
             self.attend_one_cb(s_num)
             gstud.status_bar.push(c_id, 'Getting attendance for ' + s_name)
 
@@ -165,7 +145,6 @@ class Conduit:
 
     def reload_ln(self):
         '''reload long view'''
-#        self.tv.set_model(None)
         # FIX it like reload_sh ^^^
         for cc in self.tv.get_columns():
             self.tv.remove_column(cc)
@@ -174,7 +153,6 @@ class Conduit:
         date_ls = self.get_dates() # gets tuple: (date list, length)
 
         self.insert_columns(date_ls) # Doesn't return anything!!!
-#        self.tv.set_model(self.model)
         self.ins_main()
 
     def get_years(self):
@@ -196,13 +174,12 @@ class Conduit:
         return (year1, year2, sem)
 
     def get_dates(self):
-        # get from base all unic dates of events AND grades
+        ''' get from base all unic dates of events AND grades '''
 
         # TODO: add all other events (tests, essays)
 
         conn = self.open_base()
         cur = conn.cursor()
-#        cur.execute('select date from lectures join seminars on lectures.date!=seminars.date')
         cur.execute('select date from lectures')
         res = cur.fetchall()
         cur.execute('select date from seminars')
@@ -339,7 +316,6 @@ class Conduit:
         cm = "select a_num, s_num, essays.topic from assignments join essays on assignments.e_id=essays.e_id where delivered<='" + self.date + "' and assignments.mark is NULL" + tail # TODO: delete mark is NULL condition after making completed assignments move from this table into grades
 
         wait = self.exec_sql(cm)
-#        print 'wait', wait
 
         # assignments: a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)
         if debtors:
@@ -372,8 +348,6 @@ class Conduit:
         dates = [l_dates[0], s_dates[0], t_dates[0], e_dates[0], d_dates[0]]
 
         for dd in range(len(dates)):
-#            print dd, dates[dd][1]
-#            print 'sem', self.semester
 
             if dates[dd][0]:
                 itr = self.mod_i.append()
@@ -395,8 +369,6 @@ class Conduit:
                 stat = u'Ожидается'
             elif dates[dd][1] == self.date:
                 stat = u'Сегодня'
-#            elif dates[dd][1] < self.date:
-#                stat = u'Долги!'
 
             # model: status, date, e_id, e_word (Лекция...), topic
             self.mod_i.set(itr, 0, stat, 1, dates[dd][1], 2, dates[dd][0], 3, e_word, 4, dates[dd][2])
@@ -440,7 +412,6 @@ class Conduit:
             cm = 'select * from attendance where s_num=' + s_num + ' and date="' + self.date + '"'
             att = self.exec_sql(cm)
             if att: # there is an absence remark for this student and date
-#                print 'att', att[0]
                 c_res.extend([9, att[0][0]])
                 if att[0][3] == 'N':
                     c_res.extend([6, True])
@@ -460,7 +431,6 @@ class Conduit:
             grade_c = []
             if len(grade_c_ls) > 1:
                 for i in grade_c_ls:
-                    print 'grades', i
                     grade_c.append(str(i[0]))
                 
                 grc = '/'.join(grade_c)
@@ -476,7 +446,6 @@ class Conduit:
                 nt = nt_ls.pop()[0] # latest note
                 c_res.extend([11, nt])
 
-#            print 'c_res', c_res
             w_mod.set(*c_res)
 
     def ins_main(self):
@@ -497,15 +466,12 @@ class Conduit:
 
         # list of graded students with their info (including grades)
         # dates - из grades (т.е. дата оценки, а не события!)
-#        cur.execute('select grades.s_num, s_name, mark, date, event from grades join students on grades.s_num=students.s_num')
         cur.execute('select grades.s_num, s_name, mark, date, e_name, e_num from grades join students on grades.s_num=students.s_num')
 
         # graded - list of all grades (separately)
         graded = cur.fetchall()
 
-#        cols = self.get_dates()[2] # "russian" - 02-02-2016. Why?
         cols = self.get_dates()[0] # Y-m-d format 
-#        print 'cols', cols
 
         # std_l - list of data (including all grades) for each student: 
         # (s_num, s_name, [(column, grade) # - list of tuples with student's grades,...])
@@ -555,19 +521,16 @@ class Conduit:
                             tmp[i] += '/' + str(j)
                         else:
                             tmp[i] = str(j)
-#                    print st, tmp
                     logging.info('student %s, tail %s', st, tmp)
                     # вставляем отсутствующих (True/False)
                     while tmp:
                         res_ls.extend(tmp.popitem()) # be careful! get keyerror if tmp is empty
-#            for rr in res_ls:
-#                print 'new row', rr
             self.model.set(*res_ls)
         cur.close()
 
     def change_wk_model(self):
         ''' change working model for main window '''
-        # remove columns, insert, set other model
+        # 1. remove columns, insert, set other model
         for x in self.tv.get_columns():
             self.tv.remove_column(x)
 
@@ -605,9 +568,7 @@ class Conduit:
         """
         av_l = model.get_value(itr, 5)
         act = model.get_value(itr, 2)
-#        print 'act', act
         if type(av_l) == types.NoneType:
-#            print 'av_l', av_l
             return False
 
         if av_l != '0':
@@ -615,10 +576,8 @@ class Conduit:
             av = float(av_ls[0])
         else: 
             av = 0
-#        av =  self.w_model.get(itr, 0,1,2,3,4,5,6,7,8,9)
 
         if self.c_group == 0: # weak
-#            print 'group - weak'
             if not act:
                 if av:
                     if av < 3.5:
@@ -630,7 +589,6 @@ class Conduit:
             else:
                 return False
         elif self.c_group == 1: # strong
-#            print 'group - strong'
             if not act:
                 if av:
                     if av >= 3.5:
@@ -642,7 +600,6 @@ class Conduit:
             else:
                 return False
         elif self.c_group == 2: # active
-#            print 'group - active'
             if not act:
                 return True
             else:
@@ -660,7 +617,6 @@ class Conduit:
         iter2 = self.modelfilter.convert_iter_to_child_iter(iter1)
 
         a_num = model.get_value(iter2, 9) # value written in Viewer 9th column (today's attendance)
-#        print 'a_num', a_num
         if ab == 'N':
             model.set_value(iter2, 7, False) # переключаем параллельные чекбоксы (активен либо L, либо N)
         elif ab == 'L':
@@ -669,7 +625,6 @@ class Conduit:
         if temp_attend and a_num:
             for t in range(len(temp_attend)):
                 if temp_attend[t][0] == a_num: # if there is absence today already, change value L/M
-#                    print 'found a_num'
                     if ab == "L":
                         ab == "N"
                     elif ab == "N":
@@ -677,7 +632,6 @@ class Conduit:
                     temp_attend[t][3] = ab # меняем L на M или наоборот
                     return
         elif a_num: # ничего в temp_att, но есть запись с прошлого запуска в базе (сегодняшняя)
-#            print 'ab', ab
             # удалить из базы, ввести в temp_att
             cm = 'delete from attendance where a_num="' + str(a_num) + '"'
             self.exec_sql(cm)
@@ -686,7 +640,6 @@ class Conduit:
         else:
             temp_attend.append([str(uuid.uuid4())[:8], s_num, self.date, ab, None, False]) # идентификатор - хэш
             model.set_value(iter2, 9, str(uuid.uuid4())[:8]) # временно! Если удаляем из temp_attend, это тоже стереть!
-#            print 'toggler', temp_attend
 
         return
 
@@ -694,14 +647,12 @@ class Conduit:
         ''' callback for mainview (Viewer, longview)'''
 
         res = []
-#        print path
 
         tit = col.get_title() # this is date, actually
 
         model, path = self.selection.get_selected_rows()
         iter_v = self.model.get_iter(path[0])
         s_num = self.model.get_value(iter_v, 0) # s_num instead of s_name
-#        print  value, tit
        
         if tit == 'student':
             # if we choose student's name, get GUI for grading
@@ -712,12 +663,10 @@ class Conduit:
             # there is similar call in self.details() - only there is a full grades list for a student
             #TODO: Сделай фильтр, показывай оценки на выбранную дату, по событию (лекция, эссе...)
 
-#            mk = self.model.get_value(iter_v, cc) 
             conn = self.open_base()
             cur = conn.cursor()
             
             # make startdate -> date in essays or else this call doenst work on essays
-#            command1 = 'select s_name, event, mark from grades join students on students.s_num="' + s_num + '"where grades.s_num="' + s_num + '" and date="' + tit + '"'
             command1 = 'select s_name, event, mark from grades join students on students.s_num="' + str(s_num) + '" where grades.s_num="' + str(s_num) + '" and date="' + tit + '"'
             cur.execute(command1)
             s_grades = cur.fetchall()
@@ -727,22 +676,17 @@ class Conduit:
                 res = []
                 event = ''
                 for line in s_grades:
-#                    print line
                     e_id = line[1] # "s3",  e_id[0] = s
                     for ev in self.ev_names:
                         if ev[:1] == e_id[0]: # s - letter part
                             event = ev
                     e_num = e_id[1] # 3 - numeric part
 
-                    # if event == "essay": # make different call to SQL
-
                     command2 = 'select date, topic from ' + event + ' where e_id="' + e_num + '"' 
                     cur.execute(command2)
                     event_l = cur.fetchall()[0]
-#                    print line[0], event_l[0], event_l[1], line[2]
 
                     res.append([line[0], line[1], event_l[0], event_l[1], line[2]]) # s_name, e_id, date, topic, mark
-#                    print res
                 self.grada = Details(res)
             else:
                 self.grada = Grader(self, s_num, b_name, path[0], tit)
@@ -776,7 +720,6 @@ class Conduit:
         ''' callback for combobox in Viewer() window. Choose group (weak, strong) to show.'''
 
         ac = widget.get_active_text() 
-#        print 'ac', ac
         if ac == 'Weak':
             self.c_group = 0
         elif ac == 'Strong':
@@ -786,15 +729,12 @@ class Conduit:
         elif ac == 'All':
             self.c_group = 3
 
-#        print self.c_group
-
         self.modelfilter.refilter()
 
     def choose_cl(self, widget):
         ''' callback for combobox in Viewer() window. Choose class to show.'''
 
         ac = widget.get_active_text() 
-#        print ac
         if ac == 'All time':
             self.semester = 0
             if debug:
@@ -823,7 +763,6 @@ class Conduit:
             if self.ev_names[i] == e_name:
                 # save current events group
                 gstud.cur_e_name = e_name
-#                print self.cur_e_name
 
                 # Clean up the TreeView. 
                 # 1. remove old columns from TV
@@ -846,7 +785,6 @@ class Conduit:
  
         s_ls = self.exec_sql(cm)
 
-#        print s_ls
         out = []
         for r in s_ls:
             itr = self.t_model.append()
@@ -955,10 +893,7 @@ class Conduit:
                                 else:
                                     cmt = 'NULL'
 
-#                                print 'curr delivery=', dl
-#                            cm = "update assignments set mark=" + mk + ", comment=" + cmt + " where a_num='" + a_num + "'"
                                 cm = "update assignments set mark=" + mk + ", delivered='" + dl + "', comment=" + cmt + " where a_num='" + a_num + "'"
-#                                print cm
                                 self.exec_sql(cm)
 
                                 model.remove(new_itr)
@@ -1004,49 +939,15 @@ class Conduit:
         '''Callback for Entry - when row with event is chosen'''
         model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
 
-#        print gstud.cur_e_name, paths[0][0] + 1
         Test_menu(gstud.cur_e_name, paths[0][0] + 1)
 
     def open_ev(self, tv, g_path, column):
         ''' callback for Details() when clicked on date - open Events, choose event '''
         res = Events(g_path)
 
-    def ins_new_event(self, e_type, date, topic, due=2): 
-        # не уверен, что надо, посмотрим "на поле боя"
-#    def ins_new_event(self, *args): 
-        # lecture, seminar, essay (date = (start, end)), test
-        conn = self.open_base()
-        cur = conn.cursor()
-
-        topic = topic.decode('utf-8')
-        due = int(due) # TODO: standart delta ^^^ =2. Read from config.
-
-        if e_type == "e":
-            date_t = date.split('-')
-            startdate_o = datetime.date(int(date_t[2]), int(date_t[1]), int(date_t[0]))
-            delta = datetime.timedelta(due)
-            enddate_o = startdate_o + delta
-            enddate = enddate_o.strftime("%d-%m-%Y")
-
-            command = 'insert into essays (date, enddate, topic) values (?,?,?);'
-            cur.execute(command, (date, enddate, topic))
-
-        elif e_type == 'l':
-            command = 'insert into lectures (date, topic) values (?,?);'
-            cur.execute(command, (date, topic))
-        elif e_type == 's':
-            command = 'insert into seminars (date, topic) values (?,?);'
-            cur.execute(command, (date, topic))
-        elif e_type == 't':
-            command = 'insert into tests (date, topic) values (?,?);'
-            cur.execute(command, (date, topic))
-
-        conn.commit()
-        cur.close()
-
     def get_enddate(self):
 
-        due = int(self.due) # TODO: standart delta. Read from config.
+        due = int(self.due)
         date_t = self.date.split('-')
         startdate_o = datetime.date(int(date_t[0]), int(date_t[1]), int(date_t[2]))
         delta = datetime.timedelta(due)
@@ -1093,11 +994,8 @@ class Conduit:
         for tab in ['lectures', 'seminars']:
             # ищем актуальную лекцию, или семинар (на сегодняшний день) 
             # lectures, seminars: e_id, date, topic , comment)"
-#TODO: а надо на прошлый раз!
-# select ... max(date) from tab where date < self.date # надо подзапросом
             command = 'select * from ' + tab + ' where date="' + self.date + '"'
             lecs = self.exec_sql(command)
-#            print 'lecs', lecs
             if lecs:
                 ev = tab + ' ' + str(lecs[0][0]) # берем первую найденную лекцию
                 top = lecs[0][2]
@@ -1108,15 +1006,13 @@ class Conduit:
 
             # grades (base):  g_num, s_num, e_name, e_num, date, mark, comment 
                     #  model: g_num, grade, date, event (full), topic, saved
-
-#                
+                
         new_iter = model.append([str(uuid.uuid4())[:8], '', self.date, ev, top, None, False])
         new_path = model.get_path(new_iter)[0]
 
         # move selection to the new entry
         c_col = self.g_tv.get_column(0)
         self.g_tv.set_cursor(new_path, c_col, False)
-#        self.tv.grab_focus()
 
     def get_topic(self, e_ls):
         ''' костылище! TODO: сделать get_f_base, как в beta'''
@@ -1167,7 +1063,6 @@ class Conduit:
                 comment = line[6]
 
                 cm = 'select topic from ' + e_name + ' where e_id="' + str(e_num) + '"' 
-#                print 'cm', cm
                 event_l = self.exec_sql(cm)[0]
                 res.append([line[0], line[5], line[2], e_word, event_l[0], comment, True]) # g_num, mark, date, event (full), topic, saved, index
             res.extend(g_temp_ls) # добавим временные оценки к взятым из базы
@@ -1179,24 +1074,19 @@ class Conduit:
         else:
             # no marks at all - make new entry
             self.grada = Details(s_num, s_name, [])
-#            Popup('This guy has no grades!')
 
     def ch_menu_cb(self, widget, event, e_id):
         ''' Callback for Choose student menu '''
         keyname = gtk.gdk.keyval_name(event.keyval)
         if keyname == "Return" and event.state & gtk.gdk.CONTROL_MASK: 
             # make a new entry 
-#            model = self.c_model()
             out = []
             model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
             for pp in paths:
                 itr = model.get_iter(pp)
-#                val = model.get_value(itr, 0) # s_num
                 s_num = model.get_value(itr, 0) # s_num
         # assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT)'
-#                out.append([str(uuid.uuid4())[:8], s_num, e_id, None, self.date, None, None])
                 out.append([str(uuid.uuid4())[:8], s_num, e_id, self.date])
-#            print out
             cm = 'insert into assignments (a_num, s_num, e_id, date) values (?,?,?,?)'
             for oo in out:
                 self.exec_sql(cm, oo)
@@ -1221,7 +1111,6 @@ class Conduit:
             if self.rem_confirm('Remove entry?'):
                 model, path = self.selection.get_selected_rows()
                 iter_v = model.get_iter(path[0])
-                # vals = [mark, date, event + num, topic, saved (False = grade not saved, it's in temp_grades), index (in temp_grades)]
                 g_num =  model.get_value(iter_v, 0)
 
                 if model.get_value(iter_v, 6):
@@ -1252,7 +1141,6 @@ class Conduit:
 
         elif (keyname == "r" or keyname == "Cyrillic_ka") and event.state & gtk.gdk.CONTROL_MASK: 
             # remove row from base or from temp_grades
-#            print temp_attend
             if self.rem_confirm('Remove entry?'):
                 model, path = self.selection.get_selected_rows()
                 iter_v = model.get_iter(path[0])
@@ -1262,7 +1150,6 @@ class Conduit:
                 for i in range(6):
                     att = model.get_value(iter_v, i) # s_num instead of s_name
                     vals.append(att)
-                print 'vals', vals
 
                 if model.get_value(iter_v, 5):
                     print 'remove from base'
@@ -1270,9 +1157,7 @@ class Conduit:
                     self.exec_sql(command)
                     model.remove(iter_v)
 
-#                    o_path = gstud.modelfilter.convert_path_to_child_path(s_num - 1)[0]
                     o_path = s_num - 1
-#                    iter_m = gstud.w_model.get_iter(s_num - 1)
                     iter_m = gstud.w_model.get_iter(o_path)
 
                     if vals[2] == self.date: #  На случай, если удаляем не в self.date, а в другой день
@@ -1302,7 +1187,6 @@ class Conduit:
         for i in range(6):
             at = self.mod_a.get_value(iter_v, i) # s_num instead of s_name
             vals.append(at)
-        print 'vals', vals
 
         if new_text == "Late" or new_text == "L":
             new_text = "L"
@@ -1347,7 +1231,6 @@ class Conduit:
 
     def edit_notes(self, cell, path, new_text): 
         ''' Callback for Notes, short view '''
-        print path
         o_path = self.modelfilter.convert_path_to_child_path(path)[0]
         self.w_model[o_path][11] = new_text # вставили новую оценку в TV
         s_num = str(int(o_path) + 1)
@@ -1357,7 +1240,6 @@ class Conduit:
 
     def edit_stud(self, cell, path, new_text, col):
         ''' callback for Stud_info '''
-        print path, col
         self.s_model[path][col] = new_text # вставили новую оценку в TV
 
         col_ls = ['s_num', 's_name', 'email', 'phone', 'photo', 'active', 'comment']
@@ -1365,7 +1247,6 @@ class Conduit:
 
 #        students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT)"
         if self.rem_confirm('Save info?'):
-#            iter_v = self.mod_g.get_iter(path)
 
             command = 'update students set ' + col_ls[col] + '="' + new_text + '" where s_num="' + s_num + '"'
             self.exec_sql(command)
@@ -1384,12 +1265,8 @@ class Conduit:
         for i in range(7):
             gr = self.mod_g.get_value(iter_v, i) # s_num instead of s_name
             vals.append(gr)
-#            print 'gr', gr
         e_ls = vals[3].split()
         g_num = vals[0]
-
-
-        print vals
 
         if self.new_gr:  # entry was just created (but not saved even to temp_grades)
             # s_num, e_name, e_num, date, mark, comment=None
@@ -1399,7 +1276,6 @@ class Conduit:
             itr = gstud.w_model.get_iter(s_num - 1)
 
             if r_mark:
-#                temp_grades.append([str(uuid.uuid4())[:8], s_num, e_ls[0], e_ls[1], vals[2], vals[1], vals[5]]) 
                 temp_grades.append([g_num, s_num, e_ls[0], e_ls[1], vals[2], vals[1], vals[5]]) 
                 gstud.w_model.set_value(itr, 8, r_mark)
 
@@ -1409,7 +1285,6 @@ class Conduit:
 
         else: # editing old entries
 
-#            if self.mod_g.get_value(iter_v, 4):
             if vals[6]: # saved - оценка записана в базу, правим прямо там
                 print 'changing the base'
                 if col == 1:
@@ -1417,7 +1292,6 @@ class Conduit:
                 elif col == 5:
                     command = 'update grades set comment=' + new_text + ' where g_num="' + str(vals[0]) + '"'
 
-#                print command
                 self.exec_sql(command)
 
             else: # оценка - в temp_grades, а не в базе
@@ -1435,17 +1309,13 @@ class Conduit:
             if r_mark:
                 itr = gstud.w_model.get_iter(s_num - 1)
                 gstud.w_model.set_value(itr, 8, r_mark)
-#            else:
-#                self.mod_g[path][1] = '' # вставили новую оценку в TV
 
     def edit_event(self, cell, path, new_text, col):
-#        print path, new_text
         tab_num = self.combo.get_active()
         tab_name = self.ev_names[tab_num]
         
         mod_e = self.e_tv.get_model() # current model (there are 4)
         n = mod_e.get_n_columns()
-        print 'n_colunns', n
 
         if tab_num == 1:
             j = 3
@@ -1463,28 +1333,23 @@ class Conduit:
         if vals[0] == 0:
             vals[0] = None # for e_id Int primary key - autoiteration
         
-#        print tab_name
         if self.rem_confirm('Save topic?'):
             if self.new_ev:
                 if tab_num == 1: # essays
                     command = 'insert into ' + tab_name + ' (e_id, date, enddate, topic, comment) values (?,?,?,?,?)'
-                    print 'c2', command
                     self.exec_sql(command, vals)
                     self.new_ev = False
                 else:
                     command = 'insert into ' + tab_name + ' (e_id, date, topic, comment) values (?,?,?,?)'
-                    print 'c1', command
                     self.exec_sql(command, vals)
                     self.new_ev = False
             else:
                 if col == 4: # comment column
                     j += 1
                     command = 'update ' + tab_name + ' set comment="' + vals[j] + '" where e_id="' + str(vals[0]) + '"'
-                    print 'ess, comment:', command
                     self.exec_sql(command)
                 else: # topic 
                     command = 'update ' + tab_name + ' set topic="' + vals[j] + '" where e_id="' + str(vals[0]) + '"'
-                    print 'ess, topic:', command
                     self.exec_sql(command)
         # Bugs: не сохраняет comment, 
 
@@ -1503,8 +1368,6 @@ class Conduit:
 
         elif (keyname == "m" or keyname == "Cyrillic_softsign") and event.state & gtk.gdk.CONTROL_MASK: 
             # pick students to write essay
-#            self.combo.get_active() # essays, obviously. Then block it for other events
-#            self.selection
             model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
             if paths:
                 Choose_students(paths[0][0] + 1)
@@ -1521,7 +1384,6 @@ class Conduit:
         '''Move topics, starting with the current, one position (date) down'''
         
         model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
-#        rows = model.get_n_columns()
         new_top = ''
 
         # move topics down 1 step in a model:
@@ -1530,7 +1392,6 @@ class Conduit:
                 new_itr = model.iter_next(itr)
                 if new_itr: # есть еще строчка в TV
                     old_top = model.get_value(new_itr, 2) # сохраняем тему, стоявшую на следующей дате
-                    print old_top.encode('utf-8')
                     model.set(new_itr, 2, new_top) # ставим предыдущую тему на следующую дату
                     new_top = old_top
                     itr = new_itr
@@ -1539,9 +1400,7 @@ class Conduit:
             else:
                 # 0 cycle. Topic is left empty, for I missed that day.
                 itr = model.get_iter(paths[0][0])
-#                print 'path, itr', paths[0][0], itr
                 new_top = model.get_value(itr, 2)
-#                print '0 cycle, top', new_top.encode('utf-8')
                 if new_top:
                     model.set(itr, 2, '')
                 else:
@@ -1558,12 +1417,8 @@ class Conduit:
                 if e_name == 'essays':
                     # TODO: возможно стоит сделать тоже
                     print 'make new essay, delete old, don\'t be lazy'
-#                    enddate = self.get_enddate(vals[1])
-#                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
                 else:
-#                    comm = "update lectures set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
                     comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
-                    print comm
                     self.exec_sql(comm)
         # TODO: Складывать "лишние темы", получившиеся в результате пропусков, в отдельный файл (или таблицу), чтобы можно было вклеить их обратно (напр. в уже существующий лекционный день, или ctrl + up)
 
@@ -1571,7 +1426,6 @@ class Conduit:
         '''Move topics, starting with the current, one position (date) up'''
         
         model, paths = self.selection.get_selected_rows()  # 0 - filter (model) object, 1 - list of tuples [(2,), (3,)...]
-#        rows = model.get_n_columns()
         new_top = ''
 
         cur_path = paths[0][0]
@@ -1580,11 +1434,9 @@ class Conduit:
         if cur_path: # not 0 - else cannot move up
             new_itr = model.get_iter(cur_path)
             old_itr = model.get_iter(cur_path - 1)
-#                print 'path, itr', paths[0][0], itr
             new_top = model.get_value(new_itr, 2)
             old_top = model.get_value(old_itr, 2)
             conc = ' '.join([old_top, new_top])
-#                print '0 cycle, top', new_top.encode('utf-8')
             # TODO: постоянная ширина колонки 'topic'
         else:
             print '0 row, nothing to do'
@@ -1598,7 +1450,6 @@ class Conduit:
             new_itr = model.iter_next(old_itr)
             if new_itr: # есть еще строчка в TV
                 new_top = model.get_value(new_itr, 2)
-                print new_top.encode('utf-8')
                 model.set(old_itr, 2, new_top) # ставим предыдущую тему на следующую дату
             else:
                 break
@@ -1610,7 +1461,6 @@ class Conduit:
 # найти список моделей для events, цикл по ev_names[i]
         
         if self.rem_confirm('Save changes in Events?'):
-#            for e_name in self.ev_names:
             for i in range(len(self.ev_names)):
                 model = self.e_models[i]
                 e_name = self.ev_names[i]
@@ -1621,7 +1471,6 @@ class Conduit:
                     else:
                         vals = model.get(model.get_iter(n), 0, 1, 2, 3)
                         comm = "update " + e_name + " set topic='" + vals[2] + "', comment='" + vals[3] + "' where e_id='" + str(vals[0]) + "'"
-                    print comm
                     self.exec_sql(comm)
 
     def save_into_b(self):
@@ -1669,10 +1518,8 @@ class Conduit:
 
         if self.semester == 2:
             tail = date_str + self.year_ls[1] + '%"'
-#            print 'tail', tail
         elif self.semester == 1:
             tail = date_str + self.year_ls[0] + '%"'
-#            print 'tail', tail
         else:
             tail = ''
 
@@ -1688,14 +1535,12 @@ class Conduit:
         G = self.exec_sql(cm)[0][0]
         cm = 'select count(mark) from grades where s_num="' + s_num + '"' + tail
         C = str(self.exec_sql(cm)[0][0])
-#            print s_name, G, type(G)
         if G:
             G = str(round(G, 1))
             A = G + '/' + C
         else: 
             G = str(0)
             A = G
-#            print s_name, G, type(G)
 
         return A
 
@@ -1719,14 +1564,12 @@ class Conduit:
                     if self.new_gr: # the mark is set, not edited
                         Popup('this student has been graded already for this event!')
                     return False
-#                mark_ls.append(str(line[0]))
                 if line[4] == date:
                     mark_ls.append(str(line[1]))
         # check if there are alternative marks in temp_grades
 #        temp_ grades: [g_num, s_num, e_name, e_num, date, float(mark), comment]
         if temp_grades:
             for gr in temp_grades:
-#                print gr
                 if gr[2] == e_name and gr[3] == e_num:
                     if self.new_gr:
                         Popup('this student has been graded already for this event!')
@@ -1748,8 +1591,6 @@ class Conduit:
             print 'no b_name, using old b_name'
             home = os.path.expanduser('~')
             base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
-#        if debug:
-#            print 'base_p', base_p
         conn = sqlite3.connect(base_p)
         
         return conn
@@ -1759,17 +1600,10 @@ class Conduit:
         con = self.open_base()
         cur = con.cursor()
         res = []
-#        try:
-#            cur.execute(command)
-#        except sqlite3.Error, e:
-#            print "An error occurred:", e.args[0]
-#            Popup('SQL Error, look up logs')
-##            logging.error('SQL Error %s',  e.args[0]) # TODO: put error into statusbar
         if command.startswith('select'):
             cur.execute(command)
             res = cur.fetchall()
         elif command.startswith('insert'):
-            print ex
             cur.execute(command, ex)
             con.commit()
         else:
@@ -1858,12 +1692,9 @@ class Information(Conduit):
         i_label2.show()
         self.window_i.show()
 
-#        self.window_i.set_transient_for(par)
-
-
     def make_cols_info(self):
         ''' Make cols for Information menu, a part for events '''
-#        (int, str, str, str)
+        # (int, str, str, str)
         #  e_id, e_word (lection, essay), topic, status (current, incoming, set task, get res)
  
         res = []
@@ -1953,7 +1784,6 @@ class Details(Conduit):
 
         ev_word = ''
 
-#        print 'data_g', data_g
         if data_g:
             for ln in data_g:
                 iter = self.mod_g.append()
@@ -1976,7 +1806,6 @@ class Details(Conduit):
         cell4 = gtk.CellRendererText()
         cell5 = gtk.CellRendererText()
 
-#        c1 = gtk.gdk.Color('#6ef36e')#67cef9
         c1 = gtk.gdk.Color('#67cef9')#
         cell1.set_property('font', 'FreeSans 12')
         cell1.set_property('cell-background', c1)  # blue for saved entries
@@ -2001,17 +1830,14 @@ class Details(Conduit):
         self.g_tv.append_column(self.column3)
         self.g_tv.append_column(self.column4)
         self.g_tv.append_column(self.column5)
-#
+
         g_sw.show_all()
         self.g_tv.show()
         g_label.show()
         window_g.show()
 
-#        self.g_tv.connect('row-activated', self.edit_grade)
         window_g.connect('key_press_event', self.fix_grades_cb, s_num) # all other callbacks
-        self.g_tv.connect('row-activated', self.open_ev) # when clicked on date - open Events, choose event '''
-
-        # TODO: make "if" for essays (start and enddates wont show yet)
+        self.g_tv.connect('row-activated', self.open_ev) # when clicked on date - open Events, choose event 
 
 class Attendance(Conduit):
     ''' GUI for showing attendance of a student at a given date (small grades menu) '''
@@ -2056,13 +1882,11 @@ class Attendance(Conduit):
                     a_word = 'Late'
         # data_a: a_num, s_num, date, absence, comment, saved)
         # Attendance: a_num, s_num, date, absence, comment, saved
-#                self.mod_a.set(iter, 0, ln[0], 1, ln[1], 2, a_word, 3, ln[3], 4, ln[4], 5, ln[5])
                 self.mod_a.set(iter, 0, ln[0], 1, ln[1], 2, ln[2], 3, a_word, 4, ln[4], 5, ln[5])
             # TODO: показывать прогулы и опоздания за текущий семестр (то же и с оценками)
         else:
             # make a new entry (mark is empty)
             print 'This student had\'nt been late or absent'
-#            self.make_new_en(self.mod_g)
 
         self.a_tv = gtk.TreeView(self.mod_a)
         self.a_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
@@ -2075,8 +1899,6 @@ class Attendance(Conduit):
         cell3 = gtk.CellRendererText()
         cell4 = gtk.CellRendererText()
 
-#        c1 = gtk.gdk.Color('#6ef36e')#67cef9
-#        c1 = gtk.gdk.Color('#67cef9')#
         cell2.set_property('font', 'FreeSans 12')
         cell3.set_property('font', 'FreeSans 12')
         cell3.set_property('editable', True)       
@@ -2099,7 +1921,6 @@ class Attendance(Conduit):
         window_g.show()
 
         window_g.connect('key_press_event', self.fix_absence_cb, s_num)
-#        self.a_tv.connect('row-activated', self.open_ev)
 
 # TODO: сделать удаление пропусков и опозданий. 
 #       Добавление нового прогула (ctr+n). 
@@ -2142,7 +1963,6 @@ class Test_menu(Conduit):
         self.t_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
         self.selection = self.t_tv.get_selection()
 
-#        self.a_tv.set_model(self.a_model)
         self.t_tv.set_model(self.modelfilter)
         aa_sw.add(self.t_tv)
 
@@ -2297,7 +2117,6 @@ class Assign(Conduit):
         self.aa_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
         self.selection = self.aa_tv.get_selection()
 
-#        self.a_tv.set_model(self.a_model)
         self.aa_tv.set_model(self.modelfilter)
         aa_sw.add(self.aa_tv)
 
@@ -2315,11 +2134,6 @@ class Assign(Conduit):
         window_a.show()
 
         window_a.connect('key_press_event', self.assign_save) # Ctrl+n, s
-#
-#        self.aa_tv.connect('row-activated', self.assign_set) # выбираем ряд для вставки в Details
-
-#        self.combo.connect("changed", self.choose) # комбо с названиями таблиц: lectures, etc.
-#        self.combo.set_active(0)
 
     def make_asn_cols(self):
         ''' Make them when reloading Events TV, after event in Combo is choosen '''
@@ -2335,12 +2149,6 @@ class Assign(Conduit):
         cell1.set_property('font', 'FreeSans 12')
         column1 = gtk.TreeViewColumn('e_id', cell1, text=2) 
         res.append(column1)
-
-#        cell2 = gtk.CellRendererText()
-#        cell2.set_property('font', 'FreeSans 12')
-##        cm = 'select topic from essays where e_id="' + e_id + '"' # TODO: get e_id
-#        column2 = gtk.TreeViewColumn('topic', cell2) #, text=top) 
-#        res.append(column1)
 
         cell3 = gtk.CellRendererText()
         cell3.set_property('font', 'FreeSans 12')
@@ -2460,9 +2268,6 @@ class Events(Conduit):
         self.combo.connect("changed", self.choose) # комбо с названиями таблиц: lectures, etc.
         self.combo.set_active(0)
 
-        # entry to add new event (date/topic)
-#        self.entry.connect('activate', self.ins_ev_cb) # старый вызов (для Entry)
-
     def make_columns(self, ev_n):
         ''' Make them when reloading Events TV, after event in Combo is choosen '''
         res = []
@@ -2495,7 +2300,6 @@ class Events(Conduit):
         cell3.set_property('font', 'FreeSans 12')
         cell3.set_property('editable', True)       
         cell3.connect('edited', self.edit_event, tx1)
-#        cell3.connect('edited', self.edit_ev)
         column3 = gtk.TreeViewColumn('topic', cell3, text=tx1) 
         res.append(column3)
 
@@ -2503,7 +2307,6 @@ class Events(Conduit):
         cell4.set_property('font', 'FreeSans 12')
         cell4.set_property('editable', True)       
         cell4.connect('edited', self.edit_event, tx2)
-#        cell4.connect('edited', self.edit_ev)
         column4 = gtk.TreeViewColumn('comment', cell4, text=tx2) 
         res.append(column4)
 
@@ -2514,9 +2317,6 @@ class Viewer(Conduit):
 
     def __init__(self, cm):
         Conduit.__init__(self, cm)
-
-
-#        self.b_sw = b_sw # switch between bases from args: 1, 2
 
         # name of current events group (lectures, essays...)
         self.cur_e_name = ''
@@ -2546,8 +2346,6 @@ class Viewer(Conduit):
         self.date_ls = dates[0]
         self.len_d = dates[1] # number of data entries
         
-#        logging.info('dates %s', dates)
-
         # model for 'short view'
         # s_num, s_name, colored (s_num), av(abs), av(late), av(grade), checkbox(N), checkbox(L), grade, hash for absence
         self.w_model = gtk.ListStore(int, str, 'gboolean', str, str, str, 'gboolean', 'gboolean', str, str, int, str) 
@@ -2555,39 +2353,35 @@ class Viewer(Conduit):
 
         self.modelfilter = self.w_model.filter_new()
         self.modelfilter.set_visible_func(self.vis) # visible function call
-        # make cols in model
+
 ######### model for 'long view' ##########
+
         strs = [int, str, 'gboolean']
         for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
             strs.append(str) # set types for text column
             strs.append('gboolean') # set types for color column
-#
-##        logging.info('strs %s', len(strs)) # количество столбцов в модели
-#        # model for 'regular view'
+
+#        logging.info('strs %s', len(strs)) # количество столбцов в модели
+        # model for 'regular view'
         self.model = gtk.ListStore(*strs) # method to create dynamic model
-#        self.tv = gtk.TreeView(self.model)
+
 ##########################################
+
         self.tv = gtk.TreeView(self.w_model)
         self.tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
 
         self.tv.set_model(self.modelfilter)
         sw.add(self.tv)
         self.selection = self.tv.get_selection()
-#        self.selection.set_mode(gtk.SELECTION_MULTIPLE)
 
         self.combo_b = gtk.combo_box_new_text() # classes
         self.combo_g = gtk.combo_box_new_text() # groups: weak, strong
         self.label = gtk.Label() 
-#        self.entry = gtk.Entry()
-#        self.insert_columns(dates) # inserting columns
         res_cols = self.make_wk_columns() # inserting columns
         for cc in res_cols:
             self.tv.append_column(cc)
 
-#        self.tv.set_search_column(1)
-        
         sw.show_all()
-#        self.tv.show() # необязательно (sw.show_all показывает)
 
         box2.pack_start(self.label, False, False, 0)
         box3 = gtk.HBox(False, 0)
@@ -2598,7 +2392,6 @@ class Viewer(Conduit):
         self.combo_b.show()
         self.combo_g.show()
         
-#        self.combo_b_lst = ['seniors', 'minors', 'All']
         self.combo_b.set_active(0) # default
         gtd = self.get_dates()[0]
         gtd.pop()
@@ -2610,7 +2403,6 @@ class Viewer(Conduit):
                 self.combo_b.set_active(i)
         self.combo_b.append_text('Today')
                 
-#        print 'len', len(self.combo_b.get_model())
         if self.combo_b.get_active() == -1:
             self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 
@@ -2625,26 +2417,18 @@ class Viewer(Conduit):
         self.modelfilter.refilter()
 
         box2.pack_start(sw)
-#        box2.pack_start(self.entry, False, False, 0)
 
         self.status_bar = gtk.Statusbar()
-#        box2.pack_start(self.status_bar, True, True, 0)
         box2.pack_start(self.status_bar, False, False, 2)
 
-#        self.entry.connect('activate', self.entry_cb)
-#        self.entry.connect('key_press_event', self.on_key_press_event)
         f_d = pango.FontDescription("sans normal 12")
-#        c_d = pango.Color("red")
         l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
         self.label.set_text(l_text) # senior-minor year 
         self.label.modify_font(f_d)
-#        self.label.modify_style(c_d) # look up pango context
 
-#        self.entry.show()
         self.label.show()
         self.status_bar.show()
         c_id = self.status_bar.get_context_id('Смотрим оценки')
-
 
         window2.show()
         window2.connect("delete-event", self.delete_cb) 
@@ -2653,13 +2437,8 @@ class Viewer(Conduit):
         
         window2.connect('key_press_event', self.redraw_cb, c_id)
         self.tv.connect('row-activated', self.edited_cb)
-#        window2.connect('key_press_event', self.redraw_cb)
 
         self.ins_main()
-
-#        for i in range(len(self.w_model)):
-#            itr = self.w_model.get_iter(i) 
-#            print self.w_model.get(itr,0,1,2,3,4,5,6,7,8,9,10)
 
         # move cursor and selection
         c_col = self.tv.get_column(7)
@@ -2667,11 +2446,7 @@ class Viewer(Conduit):
         self.tv.grab_focus()
 
         if self.start_dialog_on:
-#            inf = Information(window2)
             inf = Information()
-#            inf.window_i.grab_focus()
-#            inf.window_i.activate_focus()
-
 
     def make_wk_columns(self):
 
@@ -2679,15 +2454,12 @@ class Viewer(Conduit):
 
         res_cols = []
 
-#        c1 = gtk.gdk.Color('#ea7e58')
-#        c1 = gtk.gdk.Color('#6ef36e')
         c1 = gtk.gdk.Color('gray')
         cell1 = gtk.CellRendererText()
         cell1.set_property('font', 'FreeSans 12')
         self.column1 = gtk.TreeViewColumn('s_num', cell1)
         cell1.set_property('cell-background', c1) 
         self.column1.set_attributes(cell1, text=0, cell_background_set=2)
-#        self.tv.append_column(self.column1)
         res_cols.append(self.column1)
 
         cell3 = gtk.CellRendererText()
@@ -2695,7 +2467,6 @@ class Viewer(Conduit):
         cell3.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
         self.column3 = gtk.TreeViewColumn('student', cell3, text=1)
         self.column3.set_sort_column_id(1)
-#        self.tv.append_column(self.column3)
         res_cols.append(self.column3)
         
         lst_stat = ['absent', 'late', 'avg grade']
@@ -2706,17 +2477,13 @@ class Viewer(Conduit):
             self.column = gtk.TreeViewColumn(lst_stat[cn], cell, text= cn + 3)
             self.column.set_sort_column_id(1)
 
-#            self.tv.append_column(self.column)
             res_cols.append(self.column)
 
-#        ls_abs = ['N', 'L']
-#        for ss in range(len(ls_abs)):
         cell4 = gtk.CellRendererToggle()
         cell4.set_property('activatable', True)
         cell4.connect('toggled', self.toggler, self.w_model, 'N', 6)
         self.column4 = gtk.TreeViewColumn('N', cell4)
         self.column4.add_attribute(cell4, 'active', 6)
-#        self.tv.append_column(self.column4)
         res_cols.append(self.column4)
 
         cell5 = gtk.CellRendererToggle()
@@ -2724,7 +2491,6 @@ class Viewer(Conduit):
         cell5.connect('toggled', self.toggler, self.w_model, 'L', 7)
         self.column5 = gtk.TreeViewColumn('L', cell5)
         self.column5.add_attribute(cell5, 'active', 7)
-#        self.tv.append_column(self.column5)
         res_cols.append(self.column5)
 
         # Grade
@@ -2732,24 +2498,18 @@ class Viewer(Conduit):
         cell6.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
 
         self.column6 = gtk.TreeViewColumn('G', cell6, text=8) 
-#        self.column6.set_sort_column_id(1)
         res_cols.append(self.column6)
 
         cell7 = gtk.CellRendererText()
         cell7.set_property('font', 'FreeSans 12')
-#        cell7.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
         cell7.set_property('editable', True)       
         cell7.connect('edited', self.edit_notes)   #, s_num) 
 
         self.column7 = gtk.TreeViewColumn('Notes', cell7, text=11) 
 
-
         res_cols.append(self.column7)
 
         return res_cols
-
-#        self.tv.append_column(self.column6)
-#        self.tv.connect('row-activated', self.edited_cb)
 
     def insert_columns(self, date):
         
@@ -2761,8 +2521,6 @@ class Viewer(Conduit):
         cell1.set_property('font', 'FreeSans 12')
         self.column1 = gtk.TreeViewColumn('s_num', cell1, text=0) 
         res_cols.append(self.column1)
-#        self.tv.append_column(self.column1)
-
 
         cell2 = gtk.CellRendererText()
         cell2.set_property('font', 'FreeSans 12')
@@ -2775,14 +2533,12 @@ class Viewer(Conduit):
         # начинаем с 3й колонки, длина = количество дат + 2
         cnt = 0 # counter for dates list date_ls
         for i in range(3, (len_d*2) + 3, 2):
-#            print 'col', date_ls[cnt], i
 #            logging.info('column %s, text from model row %s', date_ls[cnt], i)
             cell = gtk.CellRendererText()
             cell.set_property('font', 'FreeSans 12')
             cell.set_property('mode', gtk.CELL_RENDERER_MODE_ACTIVATABLE)
             cell.set_property('cell-background', a1) # COLOR for Absent students (light red?). False/True - in Liststore col
             
-#            self.column = gtk.TreeViewColumn(date_ls[cnt].strftime("%d-%m-%Y"), cell)
             self.column = gtk.TreeViewColumn(date_ls[cnt], cell)
             self.column.set_attributes(cell, text=i, cell_background_set=(i+1))
 
@@ -2791,8 +2547,6 @@ class Viewer(Conduit):
             cnt += 1 
 
         return res_cols
-
-#        self.tv.connect('row-activated', self.on_click)
 
 class Stud_info(Conduit):
     ''' Main window '''
@@ -2839,8 +2593,6 @@ class Stud_info(Conduit):
         cell7 = gtk.CellRendererText()
 
         cell0.set_property('font', 'FreeSans 12')
-#        cell0.set_property('editable', True)       
-#        cell0.connect('edited', self.edit_stud, 0) 
         cell1.set_property('font', 'FreeSans 12')
         cell1.set_property('editable', True)       
         cell1.connect('edited', self.edit_stud, 1) 
@@ -2949,7 +2701,6 @@ if __name__ == '__main__':
     config = ConfigParser.ConfigParser()
     config.read(c_path)
 
-#    global cur_model
     cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
 
     if options.debug:
@@ -2962,40 +2713,9 @@ if __name__ == '__main__':
             b_name = config.get('Paths', 'stud_path1')
         elif options.switch == '2':
             b_name = config.get('Paths', 'stud_path2')
-            print b_name
         gstud = Viewer(cur_model)
     else:
         print "no options given, exiting"
         sys.exit(0)
     main()
 
-# TODO: В Events ставим курсор на текущую дату (если есть) или в начало списка, если нету
-# TODO: make checkbox delete absence record (+popup)
-# TODO: Details: общий GUI: switch between Grades, Attendance, Assignments, Notes(?)
-# TODO: Details: Сделать комментарии к оценкам: в Details - колонку, в edited_g... - добавить опцию
-# TODO: Details: Надо ставить по умолчанию не текущее событие, а предыдущее (за которое обычно и ставится оценка)
-# TODO: Редактирование поля L/N в Attendance.
-# TODO: show student's picture, so you know, to whom you gave F-
-# TODO: Глюк: при исправлении старой оценки вылазит Popup "this student already had a grade..."
-# Не очень актуально: SQL Errors go to status bar (others too), (gtk.Statusbar), log
-# CLI: Двоеточие или / - команды-фильтры (today, last - in grades), поиск
-# Сделать окошко для всех temp_grades ? В принципе, может пригодиться
-# TODO: 
-# TODO: Перенести часть опций из str_tools (-c, -i, -r...)
-# TODO: нужна возможность отдельно импортировать lections, seminars
-# TODO: Удаление тем из Events (если еще нет в Grades)
-# TODO: Постоянная длина солонки topic в Events (а то комментариев не видать)
-# TODO: При move up событий - всплывающее меню "concatenate/drop"
-# TODO: line 659 - what the??? Разберись, нужно ли сохранять attendace в модели. Странно это.
-# TODO: Разберись, нужен ли temp_grades (temp_attend можно оставить)
-# TODO: Нужен ли бэкап отдельно, если есть dump?
-# TODO: 
-# TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
-# TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
-
-# TODO: переделать event_set - зовет старый метод grada. Или выкинуть. Переназначить Enter на Test_menu
-
-# проблема: умеет писать в Assignments только эссе! А надо еще семинары и тесты.
-# создадим меню (без таблицы), в котором можно быстро проставить оценки за семинары и тесты
-# надо заглушку в ins_assign чтобы нельзя было засунуть ничего кроме эссе.
-# Придумаем, как загружать в Test_menu только тех студентов, у которых нет оценки по данному событию
