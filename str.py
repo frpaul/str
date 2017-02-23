@@ -38,6 +38,8 @@ class Conduit:
 
     def __init__(self, b_name=None, cm=None):
 
+        self.main_path = 'blabla'
+
         self.cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
         if b_name:
             self.b_name = b_name
@@ -2107,12 +2109,12 @@ class Attendance(Conduit):
 class Bases(Conduit):
     '''GUI for assignments: essays. and personal quests '''
 
-    def __init__(self, main_view, b_names, cb_hide):
+    def __init__(self, b_names):
         # g_path - for key_press() to change row in g_tv (Details)
 
         Conduit.__init__(self)
 
-        self.main_view = main_view
+        print self.main_path
 
         self.window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window_b.set_resizable(True)
@@ -2179,11 +2181,11 @@ class Bases(Conduit):
         # возможно придется прибить main() и начать другой луп
         itr = self.b_model.get_iter(path[0])
         fpath = self.b_model.get_value(itr, 0)
-        print 'fpath back', fpath
 #        grstud = Viewer(fpath, None)
 #        self.window_b.hide()
-        self.main_view.main_path = fpath
-        self.hide_b()
+        self.main_path = fpath
+#        self.hide_b()
+        self.window_b.hide()
 # IDEA: можно стартовать Viewer спрятанным, когда этот коллбэк 
 # возвращает True, Viewer.show() Bases.hide
         return
@@ -2530,9 +2532,7 @@ class Viewer(Conduit):
     def __init__(self, b_p, cm):
         Conduit.__init__(self, b_p, cm)
 
-        self.main_path = ''
         b_path = config.get('Paths', 'base_path')
-#        print 'path', b_path
 
         b_names = os.listdir(b_path) # base names to show in menu
         bp = []
@@ -2542,12 +2542,22 @@ class Viewer(Conduit):
 
         if b_names:
             # show menu with available bases
-#            print "yes"
-            print 'paths to pass into Bases', bp
-            self.bss = Bases(self, bp)
+#            try:
+#            except Exception as e:
+#               log!
+            self.bss = Bases(bp)
+            self.bss.window_b.connect('hide', self.print_main_path)
+#            print 'visible', self.bss.window_b.get_property("visible")
 
             print 'this is it!', self.main_path
             window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    
+    def print_main_path(self, win):
+#        print win.main_path
+        
+#        self.main_path = pt
+        print 'nuuuu', self.main_path
+
 #            h_c = window2.connect('hide', self.bss.hide_b)
 #            if h_c:
 #
@@ -2710,10 +2720,10 @@ class Viewer(Conduit):
 #                inf = Information()
 ##            inf.window_i.grab_focus()
 ##            inf.window_i.activate_focus()
-        else:
-            # show menu create new base? Or point to base_dir (write to config)
-            print "There are no bases in the default base directory"
-            sys.exit(0)
+##        else:
+##            # show menu create new base? Or point to base_dir (write to config)
+##            print "There are no bases in the default base directory"
+##            sys.exit(0)
 
 
 
