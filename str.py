@@ -2110,15 +2110,15 @@ class Bases(Conduit):
         # g_path - for key_press() to change row in g_tv (Details)
         Conduit.__init__(self)
 
-        window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        window_b.set_resizable(True)
-        window_b.set_border_width(2)
-        window_b.set_size_request(250, 350)
+        self.window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window_b.set_resizable(True)
+        self.window_b.set_border_width(2)
+        self.window_b.set_size_request(250, 350)
 
-        window_b.set_title("Choose students")
+        self.window_b.set_title("Choose students")
 
         c_box1 = gtk.VBox(False, 0)
-        window_b.add(c_box1)
+        self.window_b.add(c_box1)
         c_box1.show()
 
         c_sw = gtk.ScrolledWindow()
@@ -2149,24 +2149,36 @@ class Bases(Conduit):
             self.b_model.set(*out)
 
         c_box1.pack_start(c_sw, True, True, 0)
+
+        self.window_b.set_type_hint (gtk.gdk.WINDOW_TYPE_HINT_DIALOG) 
+
         c_sw.show_all()
-        window_b.show()
+        self.window_b.show()
+
+#        self.window_b.set_modal(True)
 
 #        window_b.connect('key_press_event', self.ch_menu_cb, e_id)
-#        window_b.connect("destroy", self.destroy_cb) 
+        self.window_b.connect("destroy", self.destroy_cb) 
 
-        self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
+#        main()
 
+#        print 'level', gtk.main_level()
+
+        cb = self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
+#        if cb:
+#            self.window_b.hide()
+#    def hide_widget(self, *args):
+        
     def base_start(self, tv, path, column):
 #        Conduit.__init__(self)
         # возможно придется прибить main() и начать другой луп
         itr = self.b_model.get_iter(path[0])
         fpath = self.b_model.get_value(itr, 0)
 #        print fpath
-        Viewer(fpath, None)
+        grst = Viewer(fpath, None)
+        self.window_b.hide()
 
-#    def destroy_cb(self, widget):
-#        gtk.main_quit()
+        return True
 
     def make_b_cols(self):
         ''' cols for Students menu '''
@@ -3060,7 +3072,9 @@ if __name__ == '__main__':
     if b_names:
         # show menu with available bases
         print "yes"
-        Bases(bp)
+        bss = Bases(bp)
+#        if bss:
+#            bss.destroy()
     else:
         # show menu create new base? Or point to base_dir (write to config)
         print "No"
