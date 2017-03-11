@@ -2179,13 +2179,16 @@ class Bases(Conduit):
     def base_start(self, tv, path, column):
 #        Conduit.__init__(self)
         # возможно придется прибить main() и начать другой луп
-        itr = self.b_model.get_iter(path[0])
-        fpath = self.b_model.get_value(itr, 0)
+#        itr = self.b_model.get_iter(path[0])
+#        fpath = self.b_model.get_value(itr, 0)
 #        grstud = Viewer(fpath, None)
 #        self.window_b.hide()
-        self.main_path = fpath
+#        self.main_path = fpath
+#        b_name = fpath
 #        self.hide_b()
         self.window_b.hide()
+#        self.destroy_cb(self)
+
 # IDEA: можно стартовать Viewer спрятанным, когда этот коллбэк 
 # возвращает True, Viewer.show() Bases.hide
         return
@@ -2551,25 +2554,24 @@ class Viewer(Conduit):
 #        print 'this is it!', self.main_path
         window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
     
-    def print_main_path(self, win):
-#        print win.main_path
+#    def print_main_path(self, *args):
+    def print_main_path(self, tv, path, cl):
+#        print 'thats base name, folks', args #b_name
         
+        mod = tv.get_model()
+        itr = mod.get_iter(path[0])
+        fpath = mod.get_value(itr, 0)
+
+        print 'thats base name, folks', fpath #b_name
+
 #        self.main_path = pt
-        print 'nuuuu', self.main_path
+#        print 'nuuuu', self.main_path
 
 #            h_c = window2.connect('hide', self.bss.hide_b)
 #            if h_c:
 #
 #                print 'this is it!', self.main_path
-# А дальше-то что? Как выдрать из Bases полученный путь к базе?
-#        if bss:
-#            bss.destroy()
-#        self.b_sw = b_sw # switch between bases from args: 1, 2
 
-        # name of current events group (lectures, essays...)
-#            self.cur_e_name = ''
-#            self.cur_e_num = 0
-#
 ##        window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
 #            window2.set_resizable(True)
 #            window2.set_border_width(2)
@@ -3082,7 +3084,7 @@ if __name__ == '__main__':
 ################# Options ###########
 
 
-#    global b_name
+    global b_name
 
     global b_tv
 
@@ -3124,10 +3126,9 @@ if __name__ == '__main__':
 
     grstud = Viewer(None, None)
     bss = Bases(bp)
-
-#    bss.window_b.connect('hide', self.print_main_path)
-
     b_tv.connect('row-activated', bss.base_start)
+    b_tv.connect('row-activated', grstud.print_main_path)
+
 #    grstud.window2.connect('row-activated', grstud.print_main_path)
 
 #    b_path = config.get('Paths', 'base_path')
