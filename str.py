@@ -12,6 +12,7 @@ import sys
 import re
 import sqlite3
 import uuid
+import tarfile
 
 import ConfigParser
 import types
@@ -132,6 +133,9 @@ class Conduit:
         elif (keyname == "u" or keyname == "Cyrillic_ghe") and event.state & gtk.gdk.CONTROL_MASK:
             Information()
 
+        elif (keyname == "q" or keyname == "Cyrillic_shorti") and event.state & gtk.gdk.CONTROL_MASK:
+            self.arch(b_name)
+
     def reload_sh(self):
         '''reload short view'''
         for cc in gstud.tv.get_columns():
@@ -154,6 +158,42 @@ class Conduit:
 
         self.insert_columns(date_ls) # Doesn't return anything!!!
         self.ins_main()
+
+    def arch(self, b_path):
+        ''' Dump base to file, archivate, move? '''
+
+        names = []
+        pf = ''
+        f_name = ''
+
+        name = os.path.basename(b_path)
+        print 'name', name
+
+        left_n = os.path.splitext(name)[0] + "_dump_(" + self.date + ')'
+        f_name = left_n + '.sql'
+        print f_name
+
+        conn = sqlite3.connect(b_path)
+
+        print 'writing dump', f_name
+        with open(f_name, 'w') as f:
+            for line in conn.iterdump():
+                f.write('%s\n' % line.encode('utf8'))
+
+#        archname = 'str_dump_' + self.date + '.tgz'
+        archname = left_n + '.tgz'
+
+        print 'writing archive', archname
+
+        with tarfile.open(archname, "w:gz") as tar:
+            tar.add(f_name)
+            os.remove(f_name)
+
+# TODO: Стоит ли сделать сразу перемещение в папку архивов?
+# Возможно стоит ввести в конфиг строчку "arch_path" - путь, куда копировать архивы 
+#
+#        print 'moving archive', archname, 'to yadisk'
+#        os.rename(os.path.join(os.getcwd(), archname), os.path.join(os.path.expanduser('~'), 'yadisk', 'backups', archname))
 
     def get_years(self):
         dts = self.get_dates()[0]
