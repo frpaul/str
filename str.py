@@ -2133,18 +2133,18 @@ class Bases(Conduit):
  
         self.b_model = gtk.ListStore(str, str) # s_num, s_name
 
-        self.b_tv = gtk.TreeView()
-        self.b_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
+#        b_tv = gtk.TreeView()
+        b_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
 
-        self.selection = self.b_tv.get_selection()
+        self.selection = b_tv.get_selection()
         self.selection.set_mode(gtk.SELECTION_MULTIPLE)
 
-        self.b_tv.set_model(self.b_model)
-        c_sw.add(self.b_tv)
+        b_tv.set_model(self.b_model)
+        c_sw.add(b_tv)
 
         cols = self.make_b_cols()
         for i in cols:
-            self.b_tv.append_column(i)
+            b_tv.append_column(i)
 
         for b in b_names:
             print b
@@ -2170,7 +2170,7 @@ class Bases(Conduit):
 
 #        print 'level', gtk.main_level()
 
-        cb = self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
+#!        cb = self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
 #        print 'returned from base_start', cb
 #        if cb:
 #            self.window_b.hide()
@@ -2532,25 +2532,24 @@ class Viewer(Conduit):
     def __init__(self, b_p, cm):
         Conduit.__init__(self, b_p, cm)
 
-        b_path = config.get('Paths', 'base_path')
+#        b_path = config.get('Paths', 'base_path')
+#        b_names = os.listdir(b_path) # base names to show in menu
+#        bp = []
+#        for b in b_names:
+#            n = os.path.join(b_path, b)
+#            bp.append((n, b)) # full paths to bases
 
-        b_names = os.listdir(b_path) # base names to show in menu
-        bp = []
-        for b in b_names:
-            n = os.path.join(b_path, b)
-            bp.append((n, b)) # full paths to bases
-
-        if b_names:
+#        if b_names:
             # show menu with available bases
 #            try:
 #            except Exception as e:
 #               log!
-            self.bss = Bases(bp)
-            self.bss.window_b.connect('hide', self.print_main_path)
+#            self.bss = Bases(bp)
+#            self.bss.window_b.connect('hide', self.print_main_path)
 #            print 'visible', self.bss.window_b.get_property("visible")
 
-            print 'this is it!', self.main_path
-            window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
+#        print 'this is it!', self.main_path
+        window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
     
     def print_main_path(self, win):
 #        print win.main_path
@@ -3085,6 +3084,8 @@ if __name__ == '__main__':
 
 #    global b_name
 
+    global b_tv
+
     from optparse import OptionParser
     usage = "usage: %prog [-d] [-c config] -s base_name"
     parser = OptionParser(usage=usage)
@@ -3111,7 +3112,23 @@ if __name__ == '__main__':
         debug = False
 # TODO: Здесь нужно проверить валидность путей к базам (сколько их д.б.?,  как нумеровать
 
+    b_path = config.get('Paths', 'base_path')
+    b_names = os.listdir(b_path) # base names to show in menu
+    bp = [] # tuple with base paths and names
+
+    for b in b_names:
+        n = os.path.join(b_path, b)
+        bp.append((n, b)) # (full path to base, base name) to bases
+
+    b_tv = gtk.TreeView()
+
     grstud = Viewer(None, None)
+    bss = Bases(bp)
+
+#    bss.window_b.connect('hide', self.print_main_path)
+
+    b_tv.connect('row-activated', bss.base_start)
+#    grstud.window2.connect('row-activated', grstud.print_main_path)
 
 #    b_path = config.get('Paths', 'base_path')
 #    print 'path', b_path
