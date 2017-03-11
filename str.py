@@ -1739,7 +1739,7 @@ class Conduit:
         # should check if the base is already opened
         
         if self.b_name:
-            print 'b_name:', self.b_name
+#            print 'b_name:', self.b_name
             conn = sqlite3.connect(self.b_name)
         else:
             print 'no b_name'
@@ -2535,119 +2535,72 @@ class Viewer(Conduit):
     def __init__(self, b_p, cm):
         Conduit.__init__(self, b_p, cm)
 
-#        b_path = config.get('Paths', 'base_path')
-#        b_names = os.listdir(b_path) # base names to show in menu
-#        bp = []
-#        for b in b_names:
-#            n = os.path.join(b_path, b)
-#            bp.append((n, b)) # full paths to bases
-
-#        if b_names:
-            # show menu with available bases
-#            try:
-#            except Exception as e:
-#               log!
-#            self.bss = Bases(bp)
-#            self.bss.window_b.connect('hide', self.print_main_path)
-#            print 'visible', self.bss.window_b.get_property("visible")
-
-#        print 'this is it!', self.main_path
         window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
     
-#    def print_main_path(self, *args):
-    def print_main_path(self, tv, path, cl):
-#        print 'thats base name, folks', args #b_name
+        window2.set_resizable(True)
+        window2.set_border_width(2)
+        window2.set_size_request(950, 450)
+
+        window2.set_title("Slacker tracker")
+
+        box1 = gtk.VBox(False, 0)
+        window2.add(box1)
+        box1.show()
+        box2 = gtk.VBox(False, 10)
+        box2.set_border_width(2)
+        box1.pack_start(box2, True, True, 0)
+        box2.show()
+
+        sw = gtk.ScrolledWindow()
+        sw.set_border_width(2)
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
         
-        mod = tv.get_model()
-        itr = mod.get_iter(path[0])
-        fpath = mod.get_value(itr, 0)
-
-        print 'thats base name, folks', fpath #b_name
-
-#        self.main_path = pt
-#        print 'nuuuu', self.main_path
-
-#            h_c = window2.connect('hide', self.bss.hide_b)
-#            if h_c:
-#
-#                print 'this is it!', self.main_path
-
-##        window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
-#            window2.set_resizable(True)
-#            window2.set_border_width(2)
-#            window2.set_size_request(950, 450)
-#
-#            window2.set_title("Slacker tracker")
-#
-#            box1 = gtk.VBox(False, 0)
-#            window2.add(box1)
-#            box1.show()
-#            box2 = gtk.VBox(False, 10)
-#            box2.set_border_width(2)
-#            box1.pack_start(box2, True, True, 0)
-#            box2.show()
-#
-#            sw = gtk.ScrolledWindow()
-#            sw.set_border_width(2)
-#            sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-#            sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-#
-#            dates = self.get_dates()
-#            self.date_ls = dates[0]
-#            self.len_d = dates[1] # number of data entries
-#            
-##        logging.info('dates %s', dates)
-#
-#            # model for 'short view'
-#            # s_num, s_name, colored (s_num), av(abs), av(late), av(grade), checkbox(N), checkbox(L), grade, hash for absence
-#            self.w_model = gtk.ListStore(int, str, 'gboolean', str, str, str, 'gboolean', 'gboolean', str, str, int, str) 
-#            self.ins_wk_main(self.w_model)
-#
-#            self.modelfilter = self.w_model.filter_new()
-#            self.modelfilter.set_visible_func(self.vis) # visible function call
+        # model for 'short view'
+        # s_num, s_name, colored (s_num), av(abs), av(late), av(grade), checkbox(N), checkbox(L), grade, hash for absence
+        self.w_model = gtk.ListStore(int, str, 'gboolean', str, str, str, 'gboolean', 'gboolean', str, str, int, str) 
+        self.modelfilter = self.w_model.filter_new()
+        self.modelfilter.set_visible_func(self.vis) # visible function call
 #            # make cols in model
 ########## model for 'long view' ##########
-#            strs = [int, str, 'gboolean']
-#            for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
-#                strs.append(str) # set types for text column
-#                strs.append('gboolean') # set types for color column
-##
-###        logging.info('strs %s', len(strs)) # количество столбцов в модели
-##        # model for 'regular view'
-#            self.model = gtk.ListStore(*strs) # method to create dynamic model
-##        self.tv = gtk.TreeView(self.model)
+#        strs = [int, str, 'gboolean']
+#        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
+#            strs.append(str) # set types for text column
+#            strs.append('gboolean') # set types for color column
+###        # model for 'regular view'
+#        self.model = gtk.ListStore(*strs) # method to create dynamic model
 ###########################################
-#            self.tv = gtk.TreeView(self.w_model)
-#            self.tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
-#
-#            self.tv.set_model(self.modelfilter)
-#            sw.add(self.tv)
-#            self.selection = self.tv.get_selection()
-##        self.selection.set_mode(gtk.SELECTION_MULTIPLE)
-#
-#            self.combo_b = gtk.combo_box_new_text() # classes
-#            self.combo_g = gtk.combo_box_new_text() # groups: weak, strong
-#            self.label = gtk.Label() 
+        self.tv = gtk.TreeView(self.w_model)
+        self.tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
+
+        self.tv.set_model(self.modelfilter)
+        sw.add(self.tv)
+        self.selection = self.tv.get_selection()
+
+        self.combo_b = gtk.combo_box_new_text() # classes
+        self.combo_g = gtk.combo_box_new_text() # groups: weak, strong
+        self.label = gtk.Label() 
 ##        self.entry = gtk.Entry()
 ##        self.insert_columns(dates) # inserting columns
-#            res_cols = self.make_wk_columns() # inserting columns
-#            for cc in res_cols:
-#                self.tv.append_column(cc)
-#
+        res_cols = self.make_wk_columns() # inserting columns
+        for cc in res_cols:
+            self.tv.append_column(cc)
+
 ##        self.tv.set_search_column(1)
 #            
-#            sw.show_all()
+        sw.show_all()
 ##        self.tv.show() # необязательно (sw.show_all показывает)
 #
-#            box2.pack_start(self.label, False, False, 0)
-#            box3 = gtk.HBox(False, 0)
-#            box3.show()
-#            box2.pack_start(box3, False, False, 0)
-#            box3.pack_start(self.combo_b, False, False, 0)
-#            box3.pack_start(self.combo_g, False, False, 0)
-#            self.combo_b.show()
-#            self.combo_g.show()
-#            
+        box2.pack_start(self.label, False, False, 0)
+        box3 = gtk.HBox(False, 0)
+        box3.show()
+        box2.pack_start(box3, False, False, 0)
+        box3.pack_start(self.combo_b, False, False, 0)
+        box3.pack_start(self.combo_g, False, False, 0)
+        self.combo_b.show()
+        self.combo_g.show()
+
 ##        self.combo_b_lst = ['seniors', 'minors', 'All']
 #            self.combo_b.set_active(0) # default
 #            gtd = self.get_dates()[0]
@@ -2664,52 +2617,41 @@ class Viewer(Conduit):
 #            if self.combo_b.get_active() == -1:
 #                self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 #
-#            self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
-#            for j in self.combo_g_lst: 
-#                self.combo_g.append_text(j)
-#
-#            self.combo_b.connect('changed', self.choose_cl)
-#
-#            self.combo_g.connect('changed', self.choose_gr)
-#            self.combo_g.set_active(int(self.c_group))
-#            self.modelfilter.refilter()
-#
-#            box2.pack_start(sw)
-##        box2.pack_start(self.entry, False, False, 0)
-#
-#            self.status_bar = gtk.Statusbar()
-##        box2.pack_start(self.status_bar, True, True, 0)
-#            box2.pack_start(self.status_bar, False, False, 2)
-#
-##        self.entry.connect('activate', self.entry_cb)
-##        self.entry.connect('key_press_event', self.on_key_press_event)
-#            f_d = pango.FontDescription("sans normal 12")
-##        c_d = pango.Color("red")
-#            l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
-#            self.label.set_text(l_text) # senior-minor year 
-#            self.label.modify_font(f_d)
-##        self.label.modify_style(c_d) # look up pango context
-#
-##        self.entry.show()
-#            self.label.show()
-#            self.status_bar.show()
-#            c_id = self.status_bar.get_context_id('Смотрим оценки')
-#
-#
-#            window2.show()
-#            window2.connect("delete-event", self.delete_cb) 
-#            window2.connect("destroy", self.destroy_cb) 
-#            # try delete-event or destroy-event
-#            
-#            window2.connect('key_press_event', self.redraw_cb, c_id)
-#            self.tv.connect('row-activated', self.edited_cb)
-##        window2.connect('key_press_event', self.redraw_cb)
+        self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
+        for j in self.combo_g_lst: 
+            self.combo_g.append_text(j)
+
+        self.combo_b.connect('changed', self.choose_cl)
+
+        self.combo_g.connect('changed', self.choose_gr)
+        self.combo_g.set_active(int(self.c_group))
+        self.modelfilter.refilter()
+
+        box2.pack_start(sw)
+
+        self.status_bar = gtk.Statusbar()
+        box2.pack_start(self.status_bar, False, False, 2)
+
+#        f_d = pango.FontDescription("sans normal 12")
+###        c_d = pango.Color("red")
+#        l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
+#        self.label.set_text(l_text) # senior-minor year 
+#        self.label.modify_font(f_d)
+
+        self.label.show()
+        self.status_bar.show()
+        c_id = self.status_bar.get_context_id('Смотрим оценки')
+
+
+        window2.show()
+        window2.connect("delete-event", self.delete_cb) 
+        window2.connect("destroy", self.destroy_cb) 
+        # try delete-event or destroy-event
+        
+        window2.connect('key_press_event', self.redraw_cb, c_id)
+        self.tv.connect('row-activated', self.edited_cb)
 #
 #            self.ins_main()
-#
-##        for i in range(len(self.w_model)):
-##            itr = self.w_model.get_iter(i) 
-##            print self.w_model.get(itr,0,1,2,3,4,5,6,7,8,9,10)
 #
 #            # move cursor and selection
 #            c_col = self.tv.get_column(7)
@@ -2721,11 +2663,19 @@ class Viewer(Conduit):
 #                inf = Information()
 ##            inf.window_i.grab_focus()
 ##            inf.window_i.activate_focus()
-##        else:
-##            # show menu create new base? Or point to base_dir (write to config)
-##            print "There are no bases in the default base directory"
-##            sys.exit(0)
 
+    def print_main_path(self, tv, path, cl):
+#        print 'thats base name, folks', args #b_name
+        
+        mod = tv.get_model()
+        itr = mod.get_iter(path[0])
+        self.b_name = mod.get_value(itr, 0)
+
+        dates = self.get_dates()
+        self.date_ls = dates[0]
+        self.len_d = dates[1] # number of data entries
+        
+        self.ins_wk_main(self.w_model)
 
 
     def make_wk_columns(self):
@@ -3126,6 +3076,7 @@ if __name__ == '__main__':
 
     grstud = Viewer(None, None)
     bss = Bases(bp)
+
     b_tv.connect('row-activated', bss.base_start)
     b_tv.connect('row-activated', grstud.print_main_path)
 
