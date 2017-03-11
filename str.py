@@ -3232,3 +3232,17 @@ if __name__ == '__main__':
  Main programm checks out the STR dir, shows the _default base_ (if set in config)
  Or suggests a choise of the base to show through the menu (if number of bases > 1)
 '''
+
+#Решил хранить переменную с путем к базе в объекте-родителе обоих классов
+#
+#Наследование так не работает.
+#
+#Это два разных объекта, они ничего не знают друг о друге, соответственно данные там будут разные. Ты хочешь глобальную переменную.
+#
+#Как-то так лучше сделать:
+#
+#bases = Bases()
+#viewer = Viewer()
+#tree_view = TreeView()
+#tree_view.connect('row-activated', viewer.on_row_activated)
+#tree_view.connect('row-activated', bases.on_row_activated)
