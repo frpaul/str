@@ -36,13 +36,9 @@ global debug
 class Conduit:
     '''Callbacks and other functions.'''
 
-    def __init__(self, b_name=None, cm=None):
+    def __init__(self, cm=None):
 
-        self.cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
-        if b_name:
-            self.b_name = b_name
-        else:
-            self.b_name = None
+        self.cur_model = cm
 
         self.c_group = config.get('Settings', 'default_c_group')
 
@@ -67,13 +63,10 @@ class Conduit:
         self.new_gr = False # There is a new grade in Details (not in temp_grades yet)
         self.new_ev = False # There is a new event in Events (not in the base yet)
 
-        # get years and current semester LATER
-#        self.year_ls = []
-        self.semester = 0
+        # get years and current semester
+        self.year_ls = self.get_years() # (year1, year2, semester)
+        self.semester = self.year_ls[2]
     
-#        self.year_ls = self.get_years() # (year1, year2, semester)
-#        self.semester = self.year_ls[2]
-
     def rem_confirm(self, txt):
         ''' Confirmation dialog for removing stuff '''
 
@@ -230,7 +223,7 @@ class Conduit:
         else:
             sem = 2
 
-        return [year1, year2, sem]
+        return (year1, year2, sem)
 
     def get_dates(self):
         # get from base all unic dates of events AND grades
@@ -1651,9 +1644,6 @@ class Conduit:
     def get_tail(self, prefix=None):
         ''' Define tail for SQL command '''
 
-        year_ls = self.get_years() # (year1, year2, semester)
-        self.semester = year_ls[2]
-
         # for ambiguous col names like essays.date
         if prefix:
             date_str = ' and ' + prefix + '.date like "'
@@ -1661,10 +1651,10 @@ class Conduit:
             date_str = ' and date like "'
 
         if self.semester == 2:
-            tail = date_str + year_ls[1] + '%"'
+            tail = date_str + self.year_ls[1] + '%"'
 #            print 'tail', tail
         elif self.semester == 1:
-            tail = date_str + year_ls[0] + '%"'
+            tail = date_str + self.year_ls[0] + '%"'
 #            print 'tail', tail
         else:
             tail = ''
@@ -1734,21 +1724,16 @@ class Conduit:
 
     def open_base(self):
         # should check if the base is already opened
-        
-        if self.b_name:
-            print 'b_name:', self.b_name
-            conn = sqlite3.connect(self.b_name)
+
+        if b_name:
+            base_p = b_name
         else:
-            print 'no b_name'
-#        if b_name:
-#            base_p = b_name
-#        else:
-#            print 'no b_name, using old b_name'
-#            home = os.path.expanduser('~')
-#            base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
+            print 'no b_name, using old b_name'
+            home = os.path.expanduser('~')
+            base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
 #        if debug:
 #            print 'base_p', base_p
-#        conn = sqlite3.connect(self.b_name)
+        conn = sqlite3.connect(base_p)
         
         return conn
 
@@ -2103,98 +2088,6 @@ class Attendance(Conduit):
 #       Добавление нового прогула (ctr+n). 
 #       Редактирование поля L/N. Дату лучше не трогать
 
-class Bases(Conduit):
-    '''GUI for assignments: essays. and personal quests '''
-
-    def __init__(self, b_names):
-        # g_path - for key_press() to change row in g_tv (Details)
-        Conduit.__init__(self)
-
-        self.window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window_b.set_resizable(True)
-        self.window_b.set_border_width(2)
-        self.window_b.set_size_request(250, 350)
-
-        self.window_b.set_title("Choose students")
-
-        c_box1 = gtk.VBox(False, 0)
-        self.window_b.add(c_box1)
-        c_box1.show()
-
-        c_sw = gtk.ScrolledWindow()
-        c_sw.set_border_width(2)
-        c_sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
- 
-        self.b_model = gtk.ListStore(str, str) # s_num, s_name
-
-        self.b_tv = gtk.TreeView()
-        self.b_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
-
-        self.selection = self.b_tv.get_selection()
-        self.selection.set_mode(gtk.SELECTION_MULTIPLE)
-
-        self.b_tv.set_model(self.b_model)
-        c_sw.add(self.b_tv)
-
-        cols = self.make_b_cols()
-        for i in cols:
-            self.b_tv.append_column(i)
-
-        for b in b_names:
-            print b
-            itr = self.b_model.append()
-            out = [itr, 0, b[0], 1, b[1]]
-#            for i in range(len(r)):
-#                out.extend([i, r[i]])
-            self.b_model.set(*out)
-
-        c_box1.pack_start(c_sw, True, True, 0)
-
-        self.window_b.set_type_hint (gtk.gdk.WINDOW_TYPE_HINT_DIALOG) 
-
-        c_sw.show_all()
-        self.window_b.show()
-
-#        self.window_b.set_modal(True)
-
-#        window_b.connect('key_press_event', self.ch_menu_cb, e_id)
-        self.window_b.connect("destroy", self.destroy_cb) 
-
-#        main()
-
-#        print 'level', gtk.main_level()
-
-        cb = self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
-#        if cb:
-#            self.window_b.hide()
-#    def hide_widget(self, *args):
-        
-    def base_start(self, tv, path, column):
-#        Conduit.__init__(self)
-        # возможно придется прибить main() и начать другой луп
-        itr = self.b_model.get_iter(path[0])
-        fpath = self.b_model.get_value(itr, 0)
-#        print fpath
-        grst = Viewer(fpath, None)
-        self.window_b.hide()
-
-        return True
-
-    def make_b_cols(self):
-        ''' cols for Students menu '''
-        res = []
-#        cell1 = gtk.CellRendererText()
-#        cell1.set_property('font', 'FreeSans 12')
-#        column1 = gtk.TreeViewColumn('Num', cell1, text=0) 
-#        res.append(column1)
-
-        cell2 = gtk.CellRendererText()
-        cell2.set_property('font', 'FreeSans 12')
-        column2 = gtk.TreeViewColumn('Base Name', cell2, text=1) 
-        res.append(column2)
-
-        return res
-
 class Choose_students(Conduit):
     '''GUI for assignments: essays. and personal quests '''
 
@@ -2515,8 +2408,8 @@ class Events(Conduit):
 class Viewer(Conduit):
     ''' Main window '''
 
-    def __init__(self, b_p, cm):
-        Conduit.__init__(self, b_p, cm)
+    def __init__(self, cm):
+        Conduit.__init__(self, cm)
 
 
 #        self.b_sw = b_sw # switch between bases from args: 1, 2
@@ -2638,7 +2531,7 @@ class Viewer(Conduit):
 #        self.entry.connect('key_press_event', self.on_key_press_event)
         f_d = pango.FontDescription("sans normal 12")
 #        c_d = pango.Color("red")
-        l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
+        l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
         self.label.set_text(l_text) # senior-minor year 
         self.label.modify_font(f_d)
 #        self.label.modify_style(c_d) # look up pango context
@@ -2963,7 +2856,7 @@ class Wiz():
         gtk.main_quit()
 
     def get_bn(self, button):
-        '''Make a new base - dialog'''
+        '''Make a new base dialog'''
 
         res = self.insert_bn()  # returns base name
         print 'New base name is:', res
@@ -2975,6 +2868,37 @@ class Wiz():
 #            print b_path
             self.create_base(b_path)
 
+# TODO: Пишем в конфиге дефолтную директорию для баз (по умолчанию - в .config/str/bases)
+# В меню этого не нужно - хотят, пусть в конфиге меняют.
+# При запуске проверяем эту директорию. Если ничего нету,
+
+# Пока ничего не перерисовываем, выбрать базу можно только при старте.
+
+# Если баз нет физически, сначала выводим (пустое) меню выбора "доступных баз", с чекбоксами. 
+# Кнопка "создать новую базу". Создаем новую базу с именем, данным юзером и помещаем ее в диру для баз, сразу помечаяем как рабочую в конфиге? - Спросить надо!
+# Если в конфиге нет списка рабочих баз - то же самое меню
+# Если есть рабочие базы и они есть физически (проверяем), то открываем меню "рабочих баз".
+
+# Если базы есть, но в конфиге нет списка "рабочих баз" (которые отображаются в меню выбора базы) - 
+# Выводим меню выбора из "доступных баз". Здесь можно в чекбоксах отметить базы,
+# которые будут загружаться в меню выбора по умолчанию - "рабочие базы".
+# то же меню, только без чекбоксов. Чтобы изменить набор - спец кнопка,
+# при нажатии должны появляться чекбоксы и "доступные базы".
+# Пишем отмеченные базы в список дефолтных (конфиг).
+
+# Выбрали "рабочие базы" среди доступных. Пишем в конфиг. 
+# Появляется меню "рабочие базы" (без чекбоксов)
+# Выбираем базу для загрузки, появляется главное окно. Ффу!
+
+# Заполнение базы данными: 
+# Меню для студентов: Хотите ввести данные студентов в ручную?
+# Хотите ввести данные из файла? => открываем меню студентов. С+n - новая строка.
+# Читать vcf или свой формат (имя, e-mail, телефон, путь к фотографии, активный =0/1).
+# разделенные двойным слэшем, дефис для незаполненных полей
+#            write the path to str directory to config! Check str directory for existing bases
+# idea is simple - no more separate addresses for bases in the config. 
+# Main programm checks out the STR dir, shows the _default base_ (if set in config)
+# Or suggests a choise of the base to show through the menu (if number of bases > 1)
         else:
             print 'no result'
 
@@ -3032,7 +2956,7 @@ if __name__ == '__main__':
 ################# Options ###########
 
 
-#    global b_name
+    global b_name
 
     from optparse import OptionParser
     usage = "usage: %prog [-d] [-c config] -s base_name"
@@ -3052,45 +2976,23 @@ if __name__ == '__main__':
     config.read(c_path)
 
 #    global cur_model
-#    cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
+    cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
 
     if options.debug:
         debug = True
     else:
         debug = False
 # TODO: Здесь нужно проверить валидность путей к базам (сколько их д.б.?,  как нумеровать
+    b_name = config.get('Paths', 'stud_path1')
+    if not b_name:
+        print 'no base available, starting a wizard'
+        # start a wizard
+        wz = Wiz()
 
-    b_path = config.get('Paths', 'base_path')
-    print 'path', b_path
-
-    b_names = os.listdir(b_path) # base names to show in menu
-    bp = []
-    for b in b_names:
-        n = os.path.join(b_path, b)
-        bp.append((n, b)) # full paths to bases
-
-    if b_names:
-        # show menu with available bases
-        print "yes"
-        bss = Bases(bp)
-#        if bss:
-#            bss.destroy()
     else:
-        # show menu create new base? Or point to base_dir (write to config)
-        print "No"
+        # check for validity
+        gstud = Viewer(cur_model)
 
-    main()
-
-#    if not b_path:
-#        print 'no base available, starting a wizard'
-#        # start a wizard
-#        wz = Wiz()
-#
-#    else:
-#        # check for validity
-#        gstud = Viewer(cur_model)
-
-# Switch overrides base_path, no menues to choose - just given base.
 #    if options.switch:
 #        if options.switch == '1':
 #            b_name = config.get('Paths', 'stud_path1')
@@ -3102,6 +3004,7 @@ if __name__ == '__main__':
 #        print "no options given, exiting"
 #        sys.exit(0)
 
+    main()
 
 # TODO: В Events ставим курсор на текущую дату (если есть) или в начало списка, если нету
 # TODO: make checkbox delete absence record (+popup)
@@ -3132,8 +3035,6 @@ if __name__ == '__main__':
 # TODO: 
 # TODO: README <= формат файла Events: l//2014-03-30//Тема занятия
 # Первый маркер может иметь значения: l(ecture), s(eminar), e(ssay), t(est)
-
-
 '''# TODO: Отключен --switch. Откуда брать пути к базам? Их должно быть неограниченное количество. 
 С+o (open base) - диалог open file - для добавления (новых) и просмотра старых баз. При сохранении, имя базы пишется в конфиг. Это можно сделать для текущей базы (отдельное меню base-info, где сказано - сохранена ли она в конфиге, кнопка сохранения).
 
@@ -3143,39 +3044,4 @@ if __name__ == '__main__':
 
 Мораль - для возни с базами нужна отдельная ветка. Надо довести до ума Визард и включить обратно --switch, чтобы замержить в master. Уже накопилось коммитов.
 
------------------
- get_bn() - создаем новую базу
- insert_bn()  # returns base name - gui выбор имени базы - переделать.
-
- TODO: Пишем в конфиге дефолтную директорию для баз (по умолчанию - в .config/str/bases) +
- В меню этого не нужно - хотят, пусть в конфиге меняют.
- При запуске проверяем эту директорию. Если ничего нету,
-
- Пока ничего не перерисовываем (reload), выбрать базу можно только при старте.
-
- Если баз нет физически, сначала выводим (пустое) меню выбора "доступных баз", с чекбоксами. 
- Кнопка "создать новую базу". Создаем новую базу с именем, данным юзером и помещаем ее в диру для баз, сразу помечаяем как рабочую в конфиге? - Спросить надо!
- Если в конфиге нет списка рабочих баз - то же самое меню
- Если есть рабочие базы и они есть физически (проверяем), то открываем меню "рабочих баз".
-
- Если базы есть, но в конфиге нет списка "рабочих баз" (которые отображаются в меню выбора базы) - 
- Выводим меню выбора из "доступных баз". Здесь можно в чекбоксах отметить базы,
- которые будут загружаться в меню выбора по умолчанию - "рабочие базы".
- то же меню, только без чекбоксов. Чтобы изменить набор - спец кнопка,
- при нажатии должны появляться чекбоксы и "доступные базы".
- Пишем отмеченные базы в список дефолтных (конфиг).
-
- Выбрали "рабочие базы" среди доступных. Пишем в конфиг. 
- Появляется меню "рабочие базы" (без чекбоксов)
- Выбираем базу для загрузки, появляется главное окно. Ффу!
-
- Заполнение базы данными: 
- Меню для студентов: Хотите ввести данные студентов в ручную?
- Хотите ввести данные из файла? => открываем меню студентов. С+n - новая строка.
- Читать vcf или свой формат (имя, e-mail, телефон, путь к фотографии, активный =0/1).
- разделенные двойным слэшем, дефис для незаполненных полей
-            write the path to str directory to config! Check str directory for existing bases
- idea is simple - no more separate addresses for bases in the config. 
- Main programm checks out the STR dir, shows the _default base_ (if set in config)
- Or suggests a choise of the base to show through the menu (if number of bases > 1)
 '''
