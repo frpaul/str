@@ -227,6 +227,8 @@ class Conduit:
 
         # get current semester
         sem = 0
+        print 'self.date=', self.date
+
         if self.date[:4] < year2:
             sem = 1
         else:
@@ -253,6 +255,7 @@ class Conduit:
         
         cur.close()
 
+        # res = [(date3), (date1)...] => out = [date1, date2...] (sorted list of strings)
         out = []
         for i in res:
             z = i[0]
@@ -265,8 +268,6 @@ class Conduit:
             if not x in fin:
                 fin.append(x)
         fin.sort()
-
-        fin.append(self.date)
 
         d_plain = [] # даты в "русском формате" %d-%m-%Y
         for dd in fin:
@@ -2564,6 +2565,8 @@ class Viewer(Conduit):
         self.modelfilter.set_visible_func(self.vis) # visible function call
 #            # make cols in model
 ########## model for 'long view' ##########
+# Ясно, что теперь загрузка long view по умолчанию не получается.
+# Надо либо вставить этот кусок в коллбэк к меню Bases (print
 #        strs = [int, str, 'gboolean']
 #        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
 #            strs.append(str) # set types for text column
@@ -2581,17 +2584,13 @@ class Viewer(Conduit):
         self.combo_b = gtk.combo_box_new_text() # classes
         self.combo_g = gtk.combo_box_new_text() # groups: weak, strong
         self.label = gtk.Label() 
-##        self.entry = gtk.Entry()
-##        self.insert_columns(dates) # inserting columns
+
         res_cols = self.make_wk_columns() # inserting columns
         for cc in res_cols:
             self.tv.append_column(cc)
 
-##        self.tv.set_search_column(1)
-#            
         sw.show_all()
-##        self.tv.show() # необязательно (sw.show_all показывает)
-#
+
         box2.pack_start(self.label, False, False, 0)
         box3 = gtk.HBox(False, 0)
         box3.show()
@@ -2601,22 +2600,7 @@ class Viewer(Conduit):
         self.combo_b.show()
         self.combo_g.show()
 
-##        self.combo_b_lst = ['seniors', 'minors', 'All']
-#            self.combo_b.set_active(0) # default
-#            gtd = self.get_dates()[0]
-#            gtd.pop()
-#
-#            self.combo_b.append_text('All time')
-#            for i in range(1, len(gtd)):
-#                self.combo_b.append_text(gtd[i])
-#                if gtd[i] == self.date: # if today is in CPlan
-#                    self.combo_b.set_active(i)
-#            self.combo_b.append_text('Today')
-#                    
-##        print 'len', len(self.combo_b.get_model())
-#            if self.combo_b.get_active() == -1:
-#                self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
-#
+
         self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
         for j in self.combo_g_lst: 
             self.combo_g.append_text(j)
@@ -2631,12 +2615,6 @@ class Viewer(Conduit):
 
         self.status_bar = gtk.Statusbar()
         box2.pack_start(self.status_bar, False, False, 2)
-
-#        f_d = pango.FontDescription("sans normal 12")
-###        c_d = pango.Color("red")
-#        l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
-#        self.label.set_text(l_text) # senior-minor year 
-#        self.label.modify_font(f_d)
 
         self.label.show()
         self.status_bar.show()
@@ -2664,7 +2642,7 @@ class Viewer(Conduit):
 ##            inf.window_i.grab_focus()
 ##            inf.window_i.activate_focus()
 
-    def print_main_path(self, tv, path, cl):
+    def load_base(self, tv, path, cl):
 #        print 'thats base name, folks', args #b_name
         
         mod = tv.get_model()
@@ -2674,8 +2652,30 @@ class Viewer(Conduit):
         dates = self.get_dates()
         self.date_ls = dates[0]
         self.len_d = dates[1] # number of data entries
-        
+
+        # insert rows into model
         self.ins_wk_main(self.w_model)
+
+        # change label font, set label text
+        f_d = pango.FontDescription("sans normal 12")
+        l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
+        self.label.set_text(l_text) # senior-minor year 
+        self.label.modify_font(f_d)
+
+        self.combo_b.set_active(0) # default
+        gtd = self.get_dates()[0]
+        gtd.pop()
+
+        self.combo_b.append_text('All time')
+        for i in range(1, len(gtd)):
+            self.combo_b.append_text(gtd[i])
+            if gtd[i] == self.date: # if today is in CPlan
+                self.combo_b.set_active(i)
+        self.combo_b.append_text('Today')
+                
+#        print 'len', len(self.combo_b.get_model())
+        if self.combo_b.get_active() == -1:
+            self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 
 
     def make_wk_columns(self):
@@ -3078,9 +3078,7 @@ if __name__ == '__main__':
     bss = Bases(bp)
 
     b_tv.connect('row-activated', bss.base_start)
-    b_tv.connect('row-activated', grstud.print_main_path)
-
-#    grstud.window2.connect('row-activated', grstud.print_main_path)
+    b_tv.connect('row-activated', grstud.load_base)
 
 #    b_path = config.get('Paths', 'base_path')
 #    print 'path', b_path
