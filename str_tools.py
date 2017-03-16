@@ -96,42 +96,6 @@ class Conduit:
         os.rename(os.path.join(os.getcwd(), archname), os.path.join(os.path.expanduser('~'), 'yadisk', 'backups', archname))
 
 
-    def arch(self, *args):
-
-        names = []
-
-        for bs in args[0]: # files to process: >= 1 
-            name = os.path.basename(bs)
-            if name.startswith('sen'):
-                pf = 'sen'
-            elif name.startswith('min'):
-                pf = 'min'
-            
-            f_name = pf + "_dump_" + self.date + '.sql'
-
-            names.append(f_name)
-
-            conn = sqlite3.connect(bs)
-
-            print 'writing dump', f_name
-
-            with open(f_name, 'w') as f:
-                for line in conn.iterdump():
-                    f.write('%s\n' % line.encode('utf8'))
-
-        archname = 'str_dump_' + self.date + '.tgz'
-
-        print 'writing archive', archname
-
-        with tarfile.open(archname, "w:gz") as tar:
-            for n in names:
-                tar.add(n)
-                os.remove(n)
-
-        print 'moving archive', archname, 'to yadisk'
-
-        os.rename(os.path.join(os.getcwd(), archname), os.path.join(os.path.expanduser('~'), 'yadisk', 'backups', archname))
-
     def open_base(self):
         # should check if the base is already opened
 
@@ -156,7 +120,6 @@ class Conduit:
 #        cur.execute("INSERT INTO " + tab_name + " (s_num, s_name, email, phone, photo, class) VALUES (?,?,?,?,?,?);", data)
 #        cur.execute("INSERT INTO " + tab_name + " (s_name, email, phone, photo, class, comment) VALUES (?,?,?,?,?,?);", data)
         cur.execute("INSERT INTO " + tab_name + " (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
-# TODO: приделать к Stud_info. Обязательно пишем s_num, email, active - иначе не заведется
         conn.commit()
         cur.close()
 
@@ -397,12 +360,6 @@ if __name__ == '__main__':
             # needs NO table name as an argument
             main_f.create_base()
             
-        elif options.archivate:
-            # make dump, archivate, put into yadisk dir
-            main_f = Conduit() # get all filenames
-#            main_f.arch(args[:-1], args[:1]) # False - do not write to file
-            main_f.arch(args) # False - do not write to file
-
         elif options.archivate:
             # make dump, archivate, put into yadisk dir
             main_f = Conduit() # get all filenames
