@@ -831,7 +831,8 @@ class Conduit:
         ''' callback for combobox in Viewer() window. Choose class to show.'''
 
         ac = widget.get_active_text() 
-#        print ac
+        print 'ac', ac
+
         if ac == 'All time':
             self.semester = 0
             if debug:
@@ -2605,7 +2606,6 @@ class Viewer(Conduit):
         for j in self.combo_g_lst: 
             self.combo_g.append_text(j)
 
-        self.combo_b.connect('changed', self.choose_cl)
 
         self.combo_g.connect('changed', self.choose_gr)
         self.combo_g.set_active(int(self.c_group))
@@ -2677,6 +2677,7 @@ class Viewer(Conduit):
         if self.combo_b.get_active() == -1:
             self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 
+        self.combo_b.connect('changed', self.choose_cl)
 
     def make_wk_columns(self):
 
@@ -3199,15 +3200,7 @@ if __name__ == '__main__':
  Main programm checks out the STR dir, shows the _default base_ (if set in config)
  Or suggests a choise of the base to show through the menu (if number of bases > 1)
 '''
-
-#Решил хранить переменную с путем к базе в объекте-родителе обоих классов
-#
-#Наследование так не работает.
-#
-#Это два разных объекта, они ничего не знают друг о друге, соответственно данные там будут разные. Ты хочешь глобальную переменную.
-#
-#Как-то так лучше сделать:
-#
+# LOR advice:
 #bases = Bases()
 #viewer = Viewer()
 #tree_view = TreeView()
