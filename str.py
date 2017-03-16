@@ -38,8 +38,6 @@ class Conduit:
 
     def __init__(self, b_name=None, cm=None):
 
-        self.main_path = 'blabla'
-
         self.cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
         if b_name:
             self.b_name = b_name
@@ -1086,6 +1084,9 @@ class Conduit:
     def make_new_en(self, model):            
         ''' Make new entry for Details() '''
 
+# dont forget, self.b_name is different in Conduit and Viewer. 
+# TODO: Fix it!
+        self.b_name = gstud.b_name
         self.new_gr = True # entry was just created (but not saved even to temp_grades)
 
         for tab in ['lectures', 'seminars']:
@@ -2116,8 +2117,6 @@ class Bases(Conduit):
 
         Conduit.__init__(self)
 
-        print self.main_path
-
         self.window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window_b.set_resizable(True)
         self.window_b.set_border_width(2)
@@ -2148,6 +2147,7 @@ class Bases(Conduit):
         for i in cols:
             b_tv.append_column(i)
 
+        # seeting base names into the TV, to choose from
         for b in b_names:
             print b
             itr = self.b_model.append()
@@ -2158,7 +2158,7 @@ class Bases(Conduit):
 
         c_box1.pack_start(c_sw, True, True, 0)
 
-        self.window_b.set_type_hint (gtk.gdk.WINDOW_TYPE_HINT_DIALOG) 
+        self.window_b.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_DIALOG) 
 
         c_sw.show_all()
         self.window_b.show()
@@ -2172,22 +2172,15 @@ class Bases(Conduit):
 
 #        print 'level', gtk.main_level()
 
-#!        cb = self.b_tv.connect('row-activated', self.base_start) # when clicked on base name - start main programm
-#        print 'returned from base_start', cb
+#!        cb = self.b_tv.connect('row-activated', self.hide_menu) # when clicked on base name - start main programm
+#        print 'returned from hide_menu', cb
 #        if cb:
 #            self.window_b.hide()
 #    def hide_widget(self, *args):
         
-    def base_start(self, tv, path, column):
-#        Conduit.__init__(self)
-        # возможно придется прибить main() и начать другой луп
-#        itr = self.b_model.get_iter(path[0])
-#        fpath = self.b_model.get_value(itr, 0)
-#        gstud = Viewer(fpath, None)
-#        self.window_b.hide()
-#        self.main_path = fpath
-#        b_name = fpath
-#        self.hide_b()
+    def hide_menu(self, tv, path, column):
+        # actually this callback hides Bases menu
+
         self.window_b.hide()
 #        self.destroy_cb(self)
 
@@ -2645,8 +2638,10 @@ class Viewer(Conduit):
     def load_base(self, tv, path, cl):
 #        print 'thats base name, folks', args #b_name
         
+        # get base name out of Bases menu
         mod = tv.get_model()
         itr = mod.get_iter(path[0])
+        # setting base name universally
         self.b_name = mod.get_value(itr, 0)
 
         dates = self.get_dates()
@@ -3078,7 +3073,7 @@ if __name__ == '__main__':
     gstud = Viewer(None, None)
     bss = Bases(bp)
 
-    b_tv.connect('row-activated', bss.base_start)
+    b_tv.connect('row-activated', bss.hide_menu)
     b_tv.connect('row-activated', gstud.load_base)
 
 #    b_path = config.get('Paths', 'base_path')
