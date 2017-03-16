@@ -18,7 +18,6 @@ import ConfigParser
 import types
 import logging
 import datetime
-#import gobject
 
 logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", filename="students.log", filemode="w", level=logging.INFO)
 
@@ -34,12 +33,21 @@ temp_attend = []
 global debug
 
 class Conduit:
-    '''Inspect students' attendance and grades, personal info'''
+    '''Callbacks and other functions.'''
 
-    def __init__(self, cm=None):
+    def __init__(self, b_name=None, cm=None):
 
-        self.cur_model = cm
+        self.main_path = 'blabla'
 
+#<<<<<<< HEAD
+#=======
+        self.cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
+        if b_name:
+            self.b_name = b_name
+        else:
+            self.b_name = None
+
+#>>>>>>> iss01
         self.c_group = config.get('Settings', 'default_c_group')
 
         self.start_dialog_on = bool(int(config.get('Settings', 'start_dialog_on')))
@@ -57,9 +65,12 @@ class Conduit:
         self.new_gr = False # There is a new grade in Details (not in temp_grades yet)
         self.new_ev = False # There is a new event in Events (not in the base yet)
 
-        # get years and current semester
-        self.year_ls = self.get_years() # (year1, year2, semester)
-        self.semester = self.year_ls[2]
+        # get years and current semester LATER
+#        self.year_ls = []
+        self.semester = 0
+    
+#        self.year_ls = self.get_years() # (year1, year2, semester)
+#        self.semester = self.year_ls[2]
 
     def rem_confirm(self, txt):
         ''' Confirmation dialog for removing stuff '''
@@ -133,6 +144,7 @@ class Conduit:
         elif (keyname == "u" or keyname == "Cyrillic_ghe") and event.state & gtk.gdk.CONTROL_MASK:
             Information()
 
+        # dump base(s), archivate, move
         elif (keyname == "q" or keyname == "Cyrillic_shorti") and event.state & gtk.gdk.CONTROL_MASK:
             self.arch(b_name)
 
@@ -171,6 +183,7 @@ class Conduit:
 
         left_n = os.path.splitext(name)[0] + "_dump_(" + self.date + ')'
         f_name = left_n + '.sql'
+
         print f_name
 
         conn = sqlite3.connect(b_path)
@@ -206,17 +219,17 @@ class Conduit:
 
         # get current semester
         sem = 0
+        print 'self.date=', self.date
+
         if self.date[:4] < year2:
             sem = 1
         else:
             sem = 2
 
-        return (year1, year2, sem)
+        return [year1, year2, sem]
 
     def get_dates(self):
         ''' get from base all unic dates of events AND grades '''
-
-        # TODO: add all other events (tests, essays)
 
         conn = self.open_base()
         cur = conn.cursor()
@@ -233,7 +246,7 @@ class Conduit:
         
         cur.close()
 
-#        out = res[0].sort()
+        # res = [(date3), (date1)...] => out = [date1, date2...] (sorted list of strings)
         out = []
         for i in res:
             z = i[0]
@@ -246,8 +259,6 @@ class Conduit:
             if not x in fin:
                 fin.append(x)
         fin.sort()
-
-        fin.append(self.date)
 
         d_plain = [] # даты в "русском формате" %d-%m-%Y
         for dd in fin:
@@ -981,6 +992,24 @@ class Conduit:
 
         Test_menu(gstud.cur_e_name, paths[0][0] + 1)
 
+# TODO: а что если Entry вызван из Viewer, а не из Details?
+# можно просто сделать потомка от Entry
+        cur_mod = tv.get_model()
+
+        iter_cur = cur_mod.get_iter(path)
+        e_num = cur_mod.get_value(iter_cur, 0)
+#        e_date = cur_mod.get_value(iter_cur, 1) # дата события
+        e_top = cur_mod.get_value(iter_cur, 2)
+        e_word = gstud.cur_e_name + ' ' + str(e_num) # что за ерунда? cur_e_name?
+
+        iter_g = gstud.grada.mod_g.get_iter(g_path)
+        g_date = gstud.grada.mod_g.get_value(iter_g, 2) # дата оценки
+        #  mod_g: g_num, grade, date, event (full), topic, saved, index=None (its not in temp_grades)
+        gstud.grada.mod_g.set(iter_g, 1, None, 2, g_date, 3, e_word, 4, e_top)
+        # this is alias: self.grada = Details() - needed for different set of data to pass
+
+#        destroy_cb(self) # можно сделать два объекта Events() c разными коллбэками. Один - с дестроем, другой - без
+
     def open_ev(self, tv, g_path, column):
         ''' callback for Details() when clicked on date - open Events, choose event '''
         res = Events(g_path)
@@ -1550,6 +1579,9 @@ class Conduit:
     def get_tail(self, prefix=None):
         ''' Define tail for SQL command '''
 
+        year_ls = self.get_years() # (year1, year2, semester)
+        self.semester = year_ls[2]
+
         # for ambiguous col names like essays.date
         if prefix:
             date_str = ' and ' + prefix + '.date like "'
@@ -1557,9 +1589,16 @@ class Conduit:
             date_str = ' and date like "'
 
         if self.semester == 2:
-            tail = date_str + self.year_ls[1] + '%"'
+#<<<<<<< HEAD
+#            tail = date_str + self.year_ls[1] + '%"'
+#        elif self.semester == 1:
+#            tail = date_str + self.year_ls[0] + '%"'
+#=======
+            tail = date_str + year_ls[1] + '%"'
+#            print 'tail', tail
         elif self.semester == 1:
-            tail = date_str + self.year_ls[0] + '%"'
+            tail = date_str + year_ls[0] + '%"'
+#            print 'tail', tail
         else:
             tail = ''
 
@@ -1624,14 +1663,23 @@ class Conduit:
 
     def open_base(self):
         # should check if the base is already opened
-
-        if b_name:
-            base_p = b_name
+        
+        if self.b_name:
+#            print 'b_name:', self.b_name
+            conn = sqlite3.connect(self.b_name)
         else:
-            print 'no b_name, using old b_name'
-            home = os.path.expanduser('~')
-            base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
-        conn = sqlite3.connect(base_p)
+
+            print 'no b_name'
+
+#        if b_name:
+#            base_p = b_name
+#        else:
+#            print 'no b_name, using old b_name'
+#            home = os.path.expanduser('~')
+#            base_p = os.path.join(home, 'svncod/trunk/student_base_01.db')
+#        if debug:
+#            print 'base_p', base_p
+#        conn = sqlite3.connect(self.b_name)
         
         return conn
 
@@ -2049,6 +2097,88 @@ class Test_menu(Conduit):
         column6 = gtk.TreeViewColumn('commment', cell6, text=3) 
         res.append(column6)
 
+class Bases(Conduit):
+    '''GUI for assignments: essays. and personal quests '''
+
+    def __init__(self, b_names):
+        # g_path - for key_press() to change row in g_tv (Details)
+
+        Conduit.__init__(self)
+
+        print self.main_path
+
+        self.window_b = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window_b.set_resizable(True)
+        self.window_b.set_border_width(2)
+        self.window_b.set_size_request(250, 350)
+
+        self.window_b.set_title("Choose students")
+
+        c_box1 = gtk.VBox(False, 0)
+        self.window_b.add(c_box1)
+        c_box1.show()
+
+        c_sw = gtk.ScrolledWindow()
+        c_sw.set_border_width(2)
+        c_sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+ 
+        self.b_model = gtk.ListStore(str, str) # s_num, s_name
+
+#        b_tv = gtk.TreeView()
+        b_tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
+
+        self.selection = b_tv.get_selection()
+        self.selection.set_mode(gtk.SELECTION_MULTIPLE)
+
+        b_tv.set_model(self.b_model)
+        c_sw.add(b_tv)
+
+        cols = self.make_b_cols()
+        for i in cols:
+            b_tv.append_column(i)
+
+        for b in b_names:
+            print b
+            itr = self.b_model.append()
+            out = [itr, 0, b[0], 1, b[1]]
+#            for i in range(len(r)):
+#                out.extend([i, r[i]])
+            self.b_model.set(*out)
+
+        c_box1.pack_start(c_sw, True, True, 0)
+
+        self.window_b.set_type_hint (gtk.gdk.WINDOW_TYPE_HINT_DIALOG) 
+
+        c_sw.show_all()
+        self.window_b.show()
+
+        self.window_b.connect("destroy", self.destroy_cb) 
+
+    def base_start(self, tv, path, column):
+        self.window_b.hide()
+#        self.destroy_cb(self)
+
+# IDEA: можно стартовать Viewer спрятанным, когда этот коллбэк 
+# возвращает True, Viewer.show() Bases.hide
+        return
+
+    def hide_b(self):
+        self.window_b.hide()
+        return
+
+    def make_b_cols(self):
+        ''' cols for Students menu '''
+        res = []
+#        cell1 = gtk.CellRendererText()
+#        cell1.set_property('font', 'FreeSans 12')
+#        column1 = gtk.TreeViewColumn('Num', cell1, text=0) 
+#        res.append(column1)
+
+        cell2 = gtk.CellRendererText()
+        cell2.set_property('font', 'FreeSans 12')
+        column2 = gtk.TreeViewColumn('Base Name', cell2, text=1) 
+        res.append(column2)
+
         return res
 
 class Choose_students(Conduit):
@@ -2355,14 +2485,20 @@ class Events(Conduit):
 class Viewer(Conduit):
     ''' Main window '''
 
-    def __init__(self, cm):
-        Conduit.__init__(self, cm)
-
-        # name of current events group (lectures, essays...)
-        self.cur_e_name = ''
-        self.cur_e_num = 0
+#<<<<<<< HEAD
+#    def __init__(self, cm):
+#        Conduit.__init__(self, cm)
+#
+#        # name of current events group (lectures, essays...)
+#        self.cur_e_name = ''
+#        self.cur_e_num = 0
+#=======
+    def __init__(self, b_p, cm):
+        Conduit.__init__(self, b_p, cm)
+#>>>>>>> iss01
 
         window2 = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    
         window2.set_resizable(True)
         window2.set_border_width(2)
         window2.set_size_request(950, 450)
@@ -2382,31 +2518,24 @@ class Viewer(Conduit):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        dates = self.get_dates()
-        self.date_ls = dates[0]
-        self.len_d = dates[1] # number of data entries
         
         # model for 'short view'
         # s_num, s_name, colored (s_num), av(abs), av(late), av(grade), checkbox(N), checkbox(L), grade, hash for absence
         self.w_model = gtk.ListStore(int, str, 'gboolean', str, str, str, 'gboolean', 'gboolean', str, str, int, str) 
-        self.ins_wk_main(self.w_model)
-
         self.modelfilter = self.w_model.filter_new()
         self.modelfilter.set_visible_func(self.vis) # visible function call
 
-######### model for 'long view' ##########
-
-        strs = [int, str, 'gboolean']
-        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
-            strs.append(str) # set types for text column
-            strs.append('gboolean') # set types for color column
-
-#        logging.info('strs %s', len(strs)) # количество столбцов в модели
-        # model for 'regular view'
-        self.model = gtk.ListStore(*strs) # method to create dynamic model
-
-##########################################
-
+#            # make cols in model
+########## model for 'long view' ##########
+# Ясно, что теперь загрузка long view по умолчанию не получается.
+# Надо либо вставить этот кусок в коллбэк к меню Bases (print
+#        strs = [int, str, 'gboolean']
+#        for i in range(0, (self.len_d * 2), 2): # 3 for s_num, s_name and current date on end
+#            strs.append(str) # set types for text column
+#            strs.append('gboolean') # set types for color column
+###        # model for 'regular view'
+#        self.model = gtk.ListStore(*strs) # method to create dynamic model
+###########################################
         self.tv = gtk.TreeView(self.w_model)
         self.tv.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
 
@@ -2417,6 +2546,7 @@ class Viewer(Conduit):
         self.combo_b = gtk.combo_box_new_text() # classes
         self.combo_g = gtk.combo_box_new_text() # groups: weak, strong
         self.label = gtk.Label() 
+
         res_cols = self.make_wk_columns() # inserting columns
         for cc in res_cols:
             self.tv.append_column(cc)
@@ -2431,20 +2561,24 @@ class Viewer(Conduit):
         box3.pack_start(self.combo_g, False, False, 0)
         self.combo_b.show()
         self.combo_g.show()
-        
-        self.combo_b.set_active(0) # default
-        gtd = self.get_dates()[0]
-        gtd.pop()
-
-        self.combo_b.append_text('All time')
-        for i in range(1, len(gtd)):
-            self.combo_b.append_text(gtd[i])
-            if gtd[i] == self.date: # if today is in CPlan
-                self.combo_b.set_active(i)
-        self.combo_b.append_text('Today')
-                
-        if self.combo_b.get_active() == -1:
-            self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
+#<<<<<<< HEAD
+#        
+#        self.combo_b.set_active(0) # default
+#        gtd = self.get_dates()[0]
+#        gtd.pop()
+#
+#        self.combo_b.append_text('All time')
+#        for i in range(1, len(gtd)):
+#            self.combo_b.append_text(gtd[i])
+#            if gtd[i] == self.date: # if today is in CPlan
+#                self.combo_b.set_active(i)
+#        self.combo_b.append_text('Today')
+#                
+#        if self.combo_b.get_active() == -1:
+#            self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
+#=======
+#
+#>>>>>>> iss01
 
         self.combo_g_lst = ['Weak', 'Strong', 'Active', 'All']
         for j in self.combo_g_lst: 
@@ -2461,10 +2595,11 @@ class Viewer(Conduit):
         self.status_bar = gtk.Statusbar()
         box2.pack_start(self.status_bar, False, False, 2)
 
-        f_d = pango.FontDescription("sans normal 12")
-        l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
-        self.label.set_text(l_text) # senior-minor year 
-        self.label.modify_font(f_d)
+#<<<<<<< HEAD
+#        f_d = pango.FontDescription("sans normal 12")
+#        l_text = (os.path.basename(b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
+#        self.label.set_text(l_text) # senior-minor year 
+#        self.label.modify_font(f_d)
 
         self.label.show()
         self.status_bar.show()
@@ -2478,15 +2613,62 @@ class Viewer(Conduit):
         window2.connect('key_press_event', self.redraw_cb, c_id)
         self.tv.connect('row-activated', self.edited_cb)
 
-        self.ins_main()
+#            self.ins_main()
+#
+#            # move cursor and selection
+#            c_col = self.tv.get_column(7)
+#            self.tv.set_cursor(0, c_col, False)
+#            self.tv.grab_focus()
+#
+#            if self.start_dialog_on:
+##            inf = Information(window2)
+#                inf = Information()
+##            inf.window_i.grab_focus()
+##            inf.window_i.activate_focus()
 
-        # move cursor and selection
-        c_col = self.tv.get_column(7)
-        self.tv.set_cursor(0, c_col, False)
-        self.tv.grab_focus()
+    def load_base(self, tv, path, cl):
+#        print 'thats base name, folks', args #b_name
+        
+        mod = tv.get_model()
+        itr = mod.get_iter(path[0])
+        self.b_name = mod.get_value(itr, 0)
 
-        if self.start_dialog_on:
-            inf = Information()
+        dates = self.get_dates()
+        self.date_ls = dates[0]
+        self.len_d = dates[1] # number of data entries
+
+        # insert rows into model
+        self.ins_wk_main(self.w_model)
+
+#<<<<<<< HEAD
+#        # move cursor and selection
+#        c_col = self.tv.get_column(7)
+#        self.tv.set_cursor(0, c_col, False)
+#        self.tv.grab_focus()
+#
+#        if self.start_dialog_on:
+#            inf = Information()
+#=======
+        # change label font, set label text
+        f_d = pango.FontDescription("sans normal 12")
+        l_text = (os.path.basename(self.b_name).split('_')[0] + ' year').upper() + '    Today is: ' + self.date
+        self.label.set_text(l_text) # senior-minor year 
+        self.label.modify_font(f_d)
+
+        self.combo_b.set_active(0) # default
+        gtd = self.get_dates()[0]
+        gtd.pop()
+
+        self.combo_b.append_text('All time')
+        for i in range(1, len(gtd)):
+            self.combo_b.append_text(gtd[i])
+            if gtd[i] == self.date: # if today is in CPlan
+                self.combo_b.set_active(i)
+        self.combo_b.append_text('Today')
+                
+#        print 'len', len(self.combo_b.get_model())
+        if self.combo_b.get_active() == -1:
+            self.combo_b.set_active(len(self.combo_b.get_model()) - 1) # last item - Today
 
     def make_wk_columns(self):
 
@@ -2704,7 +2886,6 @@ class Stud_info(Conduit):
 
 class Popup:
     def __init__(self, text=None):
-#        self.title = ""
         self.text = text
         dialog = gtk.Dialog(title='warning')
         label = gtk.Label(self.text)
@@ -2712,6 +2893,106 @@ class Popup:
         label.show()
         dialog.show()
 
+#class Wiz(Conduit):
+class Wiz():
+    ''' A wizard to fill in all info,
+     needed for the application to start. Main window
+
+    '''
+    def __init__(self):
+#        Conduit.__init__(self)
+        window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        window.set_resizable(True)
+        window.set_border_width(10)
+        window.set_size_request(250, 200)
+
+        window.set_title("Studentus")
+
+        box1 = gtk.VBox(False, 0)
+        window.add(box1)
+        box1.show()
+
+        self.label = gtk.Label('Welcome to the STR.\nThere is no database available.\nDo you whant to create it?')
+        self.button1 = gtk.Button(None, gtk.STOCK_CANCEL)
+        self.button2 = gtk.Button(None, gtk.STOCK_OK)
+
+        box1.pack_start(self.label, True, True, 0)
+        box2 = gtk.HBox(False, 0)
+        box2.show()
+        box1.pack_start(box2, False, False, 0)
+        box2.pack_start(self.button1, True, False, 0)
+        box2.pack_start(self.button2, True, False, 0)
+        self.label.show()
+        self.button1.show()
+        self.button2.show()
+        window.show()
+        window.connect("destroy", self.destroy_cb) 
+        self.button1.connect('clicked', self.destroy_cb)
+        self.button2.connect('clicked', self.get_bn)
+
+    def destroy_cb(self, widget):
+        gtk.main_quit()
+
+    def get_bn(self, button):
+        '''Make a new base - dialog'''
+
+        res = self.insert_bn()  # returns base name
+        print 'New base name is:', res
+
+        if res:
+            # TODO: User needs an option for a path.
+            # TODO: Write to config
+            b_path = os.path.join(os.path.expanduser('~'), res + '.db')
+#            print b_path
+            self.create_base(b_path)
+
+        else:
+            print 'no result'
+
+    def insert_bn(self):
+        ''' A Dialog for Wizard - choose base name '''
+
+        z_dialog = gtk.Dialog("Base name", None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+        self.z_entry = gtk.Entry()
+        z_dialog.vbox.pack_start(self.z_entry, True, True, 0)
+        self.z_entry.show()
+        z_dialog.show()
+
+        response = z_dialog.run()
+        if response == -3: # resp accepted
+#            get data from Entry
+            res = self.z_entry.get_text()
+#            print res
+            z_dialog.destroy()
+            return res
+
+#            self.destroy_cb
+#            gtk.main_quit()
+#            return True
+#            return None
+        else:
+            z_dialog.destroy()
+            return
+
+    def create_base(self, b_path):
+        '''Create a new base'''
+
+        conn = sqlite3.connect(b_path)
+        cur = conn.cursor()
+        cur.executescript("""
+                CREATE TABLE students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT);
+                CREATE TABLE attendance (a_num TEXT, s_num INTEGER, date TEXT, absence TEXT, comment TEXT);
+                CREATE TABLE grades (g_num TEXT, s_num INTEGER, e_name TEXT, e_num INT, date TEXT, mark REAL, comment TEXT);
+                CREATE TABLE lectures (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE seminars (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE tests (e_id INTEGER PRIMARY KEY, date TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE essays (e_id INTEGER PRIMARY KEY, date TEXT, enddate TEXT, topic TEXT, comment TEXT);
+                CREATE TABLE notes (c_num TEXT, s_num INTEGER, date TEXT, comment TEXT);
+                CREATE TABLE assignments (a_num TEXT, s_num INTEGER, e_id INTEGER, delivered TEXT, date TEXT, mark REAL, comment TEXT);
+        """)
+        conn.commit()
+        cur.close()
 
 def main():
     gtk.main()
@@ -2724,8 +3005,10 @@ if __name__ == '__main__':
 
     global b_name
 
+    global b_tv
+
     from optparse import OptionParser
-    usage = "usage: %prog [options] filename"
+    usage = "usage: %prog [-d] [-c config] -s base_name"
     parser = OptionParser(usage=usage)
 
     parser.add_option("-s", "--switch", dest="switch", action="store", help="Switch between bases 1 and 2")
@@ -2741,21 +3024,161 @@ if __name__ == '__main__':
     config = ConfigParser.ConfigParser()
     config.read(c_path)
 
-    cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
+#    global cur_model
+#    cur_model = config.get('Settings', 'default_view') # current model used (0 = long sheet, 1 = short)
 
     if options.debug:
         debug = True
     else:
         debug = False
+# TODO: Здесь нужно проверить валидность путей к базам (сколько их д.б.?,  как нумеровать
 
-    if options.switch:
-        if options.switch == '1':
-            b_name = config.get('Paths', 'stud_path1')
-        elif options.switch == '2':
-            b_name = config.get('Paths', 'stud_path2')
-        gstud = Viewer(cur_model)
-    else:
-        print "no options given, exiting"
-        sys.exit(0)
+    b_path = config.get('Paths', 'base_path')
+    b_names = os.listdir(b_path) # base names to show in menu
+    bp = [] # tuple with base paths and names
+
+    for b in b_names:
+        n = os.path.join(b_path, b)
+        bp.append((n, b)) # (full path to base, base name) to bases
+
+    b_tv = gtk.TreeView()
+
+    grstud = Viewer(None, None)
+    bss = Bases(bp)
+
+    b_tv.connect('row-activated', bss.base_start)
+    b_tv.connect('row-activated', grstud.load_base)
+
+#    b_path = config.get('Paths', 'base_path')
+#    print 'path', b_path
+#
+#    b_names = os.listdir(b_path) # base names to show in menu
+#    bp = []
+#    for b in b_names:
+#        n = os.path.join(b_path, b)
+#        bp.append((n, b)) # full paths to bases
+#
+#    if b_names:
+#        # show menu with available bases
+#        print "yes"
+#        bss = Bases(bp)
+##        if bss:
+##            bss.destroy()
+#    else:
+#        # show menu create new base? Or point to base_dir (write to config)
+#        print "No"
+
     main()
 
+#    if not b_path:
+#        print 'no base available, starting a wizard'
+#        # start a wizard
+#        wz = Wiz()
+#
+#    else:
+#        # check for validity
+#        gstud = Viewer(cur_model)
+
+# Switch overrides base_path, no menues to choose - just given base.
+#    if options.switch:
+#        if options.switch == '1':
+#            b_name = config.get('Paths', 'stud_path1')
+#        elif options.switch == '2':
+#            b_name = config.get('Paths', 'stud_path2')
+#            print b_name
+#        gstud = Viewer(cur_model)
+#    else:
+#        print "no options given, exiting"
+#        sys.exit(0)
+
+
+# TODO: В Events ставим курсор на текущую дату (если есть) или в начало списка, если нету
+# TODO: make checkbox delete absence record (+popup)
+# TODO: Details: общий GUI: switch between Grades, Attendance, Assignments, Notes(?)
+# TODO: Details: Сделать комментарии к оценкам: в Details - колонку, в edited_g... - добавить опцию
+# TODO: Details: Надо ставить по умолчанию не текущее событие, а предыдущее (за которое обычно и ставится оценка)
+# TODO: Редактирование поля L/N в Attendance.
+# TODO: show student's picture, so you know, to whom you gave F-
+# TODO: Глюк: при исправлении старой оценки вылазит Popup "this student already had a grade..."
+# Не очень актуально: SQL Errors go to status bar (others too), (gtk.Statusbar), log
+# CLI: Двоеточие или / - команды-фильтры (today, last - in grades), поиск
+# Сделать окошко для всех temp_grades ? В принципе, может пригодиться
+# TODO: 
+# TODO: Перенести часть опций из str_tools (-c, -i, -r...)
+# TODO: нужна возможность отдельно импортировать lections, seminars
+# TODO: Удаление тем из Events (если еще нет в Grades)
+# TODO: Постоянная длина колонки topic в Events (а то комментариев не видать)
+# TODO: При move up событий - всплывающее меню "concatenate/drop"
+# TODO: line 659 - what the??? Разберись, нужно ли сохранять attendace в модели. Странно это.
+# TODO: Разберись, нужен ли temp_grades (temp_attend можно оставить)
+# TODO: Нужен ли бэкап отдельно, если есть dump?
+# TODO: 
+# TODO: В Assignments: когда ставится оценка, всплывает напоминание, если delivered не проставлено.
+# TODO: Сделай сохранение в Details. Неудобно для этого лазить в Viewer.
+# TODO: В stud_info сделать Ctrl+n - добавление студента. (s_num, и active - обязательно)
+# TODO: Перевести все диалоги и надписи на русский.
+# TODO: Перенести списки студентов, событий... в .config/str
+# TODO: 
+# TODO: README <= формат файла Events: l//2014-03-30//Тема занятия
+# Первый маркер может иметь значения: l(ecture), s(eminar), e(ssay), t(est)
+
+
+'''# TODO: Отключен --switch. Откуда брать пути к базам? Их должно быть неограниченное количество. 
+С+o (open base) - диалог open file - для добавления (новых) и просмотра старых баз. При сохранении, имя базы пишется в конфиг. Это можно сделать для текущей базы (отдельное меню base-info, где сказано - сохранена ли она в конфиге, кнопка сохранения).
+
+Переключаемся с помощью drop-down (combo) + С-b
+Читаем все имена баз из конфига, добавляем в combo.
+При переключении придется вытирать главное окно и загружать всю инфу из другой базы.
+
+Мораль - для возни с базами нужна отдельная ветка. Надо довести до ума Визард и включить обратно --switch, чтобы замержить в master. Уже накопилось коммитов.
+
+-----------------
+ get_bn() - создаем новую базу
+ insert_bn()  # returns base name - gui выбор имени базы - переделать.
+
+ TODO: Пишем в конфиге дефолтную директорию для баз (по умолчанию - в .config/str/bases) +
+ В меню этого не нужно - хотят, пусть в конфиге меняют.
+ При запуске проверяем эту директорию. Если ничего нету,
+
+ Пока ничего не перерисовываем (reload), выбрать базу можно только при старте.
+
+ Если баз нет физически, сначала выводим (пустое) меню выбора "доступных баз", с чекбоксами. 
+ Кнопка "создать новую базу". Создаем новую базу с именем, данным юзером и помещаем ее в диру для баз, сразу помечаяем как рабочую в конфиге? - Спросить надо!
+ Если в конфиге нет списка рабочих баз - то же самое меню
+ Если есть рабочие базы и они есть физически (проверяем), то открываем меню "рабочих баз".
+
+ Если базы есть, но в конфиге нет списка "рабочих баз" (которые отображаются в меню выбора базы) - 
+ Выводим меню выбора из "доступных баз". Здесь можно в чекбоксах отметить базы,
+ которые будут загружаться в меню выбора по умолчанию - "рабочие базы".
+ то же меню, только без чекбоксов. Чтобы изменить набор - спец кнопка,
+ при нажатии должны появляться чекбоксы и "доступные базы".
+ Пишем отмеченные базы в список дефолтных (конфиг).
+
+ Выбрали "рабочие базы" среди доступных. Пишем в конфиг. 
+ Появляется меню "рабочие базы" (без чекбоксов)
+ Выбираем базу для загрузки, появляется главное окно. Ффу!
+
+ Заполнение базы данными: 
+ Меню для студентов: Хотите ввести данные студентов в ручную?
+ Хотите ввести данные из файла? => открываем меню студентов. С+n - новая строка.
+ Читать vcf или свой формат (имя, e-mail, телефон, путь к фотографии, активный =0/1).
+ разделенные двойным слэшем, дефис для незаполненных полей
+            write the path to str directory to config! Check str directory for existing bases
+ idea is simple - no more separate addresses for bases in the config. 
+ Main programm checks out the STR dir, shows the _default base_ (if set in config)
+ Or suggests a choise of the base to show through the menu (if number of bases > 1)
+'''
+
+#Решил хранить переменную с путем к базе в объекте-родителе обоих классов
+#
+#Наследование так не работает.
+#
+#Это два разных объекта, они ничего не знают друг о друге, соответственно данные там будут разные. Ты хочешь глобальную переменную.
+#
+#Как-то так лучше сделать:
+#
+#bases = Bases()
+#viewer = Viewer()
+#tree_view = TreeView()
+#tree_view.connect('row-activated', viewer.on_row_activated)
+#tree_view.connect('row-activated', bases.on_row_activated)
