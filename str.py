@@ -2182,7 +2182,7 @@ class Bases(Conduit):
         # возможно придется прибить main() и начать другой луп
 #        itr = self.b_model.get_iter(path[0])
 #        fpath = self.b_model.get_value(itr, 0)
-#        grstud = Viewer(fpath, None)
+#        gstud = Viewer(fpath, None)
 #        self.window_b.hide()
 #        self.main_path = fpath
 #        b_name = fpath
@@ -3074,11 +3074,11 @@ if __name__ == '__main__':
 
     b_tv = gtk.TreeView()
 
-    grstud = Viewer(None, None)
+    gstud = Viewer(None, None)
     bss = Bases(bp)
 
     b_tv.connect('row-activated', bss.base_start)
-    b_tv.connect('row-activated', grstud.load_base)
+    b_tv.connect('row-activated', gstud.load_base)
 
 #    b_path = config.get('Paths', 'base_path')
 #    print 'path', b_path
