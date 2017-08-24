@@ -133,8 +133,14 @@ class Conduit:
         elif (keyname == "u" or keyname == "Cyrillic_ghe") and event.state & gtk.gdk.CONTROL_MASK:
             Information()
 
+        # Dump base to file
         elif (keyname == "q" or keyname == "Cyrillic_shorti") and event.state & gtk.gdk.CONTROL_MASK:
             self.arch(b_name)
+
+        elif (keyname == "h" or keyname == "Cyrillic_shorti") and event.state & gtk.gdk.CONTROL_MASK:
+#            self.help()
+            txt = 'e = events menu\nw = switch long-short view\ni = students info menu\ns = save stuff\np = purgatory\nd = details\nu = information menu\nq = dump base to file\nh = help'
+            Popup(txt)
 
     def reload_sh(self):
         '''reload short view'''

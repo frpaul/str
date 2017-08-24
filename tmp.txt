@@ -1,0 +1,3 @@
+blabla
+('/home/frpaul/.config/str/bases_tmp/senior_2015_16.db', 'senior_2015_16.db')
+('/home/frpaul/.config/str/bases_tmp/minor_2015_16.db', 'minor_2015_16.db')
