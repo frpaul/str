@@ -17,9 +17,9 @@ First steps:
 
     * Execute ./str_tools.py -c base_name.db
 
-    * ./str_tools.py -i student_list.txt
+    * ./str_tools.py -r base_name.db student_list.txt
 
-    * ./str_tools.py -r event_list.txt
+    * ./str_tools.py -i base_name.db event_list.txt
 
     * Edit configuration file strrc: insert correct paths to the base(s).
 
