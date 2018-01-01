@@ -36,7 +36,9 @@ def parse_ya(f_lines, ctg):
 def parse_mo(f_lines):
     '''parse stud_list, export to vCard'''
 
-    print 'username,password,firstname,lastname,email'
+    #print 'username,password,firstname,lastname,email,lang,cohort'
+    print 'username,password,firstname,lastname,email,lang'
+#    cohort = raw_input('Введите название курса (когорты)')
 
     for ln in f_lines:
         if ln != '\n':
@@ -48,21 +50,18 @@ def parse_mo(f_lines):
             # generate username
             user1 = uni.unidecode(name_ls[0]).replace("\'", '') # don't need quot marks in u-names
             user2 = uni.unidecode(name_ls[1]).replace("\'", '')
-            user_name = user1 + '_' + user2
+#            user_name = user1 + '_' + user2
+            user_name = user1 + '.' + user2
 
             fam = name_ls[0].encode('utf-8')
             sur = name_ls[1].encode('utf-8')
-#            orn = ''
-#            if len(name_ls) > 2:
-#                orn = name_ls[2].encode('utf-8') # сан
-#                n_full = fam + ';' + sur + ';;' + orn + '\n'
-#            else:
-#                n_full = fam + ';' + sur + ';;\n'
+            lang = 'RU'
 
             email = ln_ls[1].encode('utf-8')
 
 #            users.append(user_name + ',' + ',' + sur + ',' + fam + ',' + email + '\n')
-            print user_name + ',' + ',' + sur + ',' + fam + ',' + email
+#            print user_name + ',' + ',' + sur + ',' + fam + ',' + email + ',' + lang, ',' + cohort
+            print user_name + ',' + ',' + sur + ',' + fam + ',' + email + ',' + lang
 
 
 if __name__ == '__main__':
