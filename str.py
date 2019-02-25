@@ -2595,7 +2595,7 @@ class Viewer(Conduit):
         return res_cols
 
 class Stud_info(Conduit):
-    ''' Main window '''
+    ''' Информация о студентах '''
 
     def __init__(self):
         Conduit.__init__(self)
