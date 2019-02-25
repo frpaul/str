@@ -1001,6 +1001,18 @@ class Conduit:
 
         return enddate_o.strftime("%Y-%m-%d")
 
+    def make_new_st(self, model):            
+        # Make new student in Stud_info
+
+        mc = model.get_n_columns()
+        new_iter = model.append([0, '', '', '-', '-', '1', '', ''])
+
+        new_path = model.get_path(new_iter)[0]
+
+        c_col = self.tv.get_column(0)
+        self.tv.set_cursor(new_path, c_col, False)
+        self.tv.grab_focus()
+
     def make_new_ev(self, model):            
         ''' Make new default event for Events() '''
 #       model: (int, str, str, str, [str])
@@ -1286,16 +1298,20 @@ class Conduit:
 
     def edit_stud(self, cell, path, new_text, col):
         ''' callback for Stud_info '''
-        self.s_model[path][col] = new_text # вставили новую оценку в TV
-
-        col_ls = ['s_num', 's_name', 'email', 'phone', 'photo', 'active', 'comment']
-        s_num = str(int(path) + 1)
-
 #        students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT)"
         if self.rem_confirm('Save info?'):
 
-            command = 'update students set ' + col_ls[col] + '="' + new_text + '" where s_num="' + s_num + '"'
-            self.exec_sql(command)
+            if self.new_ev:
+                self.s_model[path][col] = new_text # вставили новую информацию в TView
+
+                col_ls = ['s_num', 's_name', 'email', 'phone', 'photo', 'active', 'comment']
+                s_num = str(int(path) + 1)
+
+                command = "INSERT INTO students (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
+                
+            else:
+                command = 'update students set ' + col_ls[col] + '="' + new_text + '" where s_num="' + s_num + '"'
+                self.exec_sql(command)
 
         # TODO: перечитать TV в Vewer short view
             self.reload_sh()
@@ -1398,6 +1414,14 @@ class Conduit:
                     command = 'update ' + tab_name + ' set topic="' + vals[j] + '" where e_id="' + str(vals[0]) + '"'
                     self.exec_sql(command)
         # Bugs: не сохраняет comment, 
+
+    def stud_n(self, widget, event):
+        ''' Callback for Stud_info() when key is pressed '''
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        if (keyname == "n" or keyname == "Cyrillic_te") and event.state & gtk.gdk.CONTROL_MASK: 
+            model = self.tv.get_model()
+            # make a new entry (mark is empty - default event)
+            self.make_new_st(model)
 
     def event_n(self, widget, event):
         ''' Callback for Events() when key is pressed '''
@@ -2692,6 +2716,9 @@ class Stud_info(Conduit):
         window2.show()
         self.get_stud_info()
 
+        window2.connect('key_press_event', self.stud_n) # Ctrl+n, s
+        self.tv.connect('row-activated', self.event_set, g_path) # выбираем ряд для вставки в Details
+
     def get_stud_info(self):
 
         conn = self.open_base()
@@ -2707,6 +2734,18 @@ class Stud_info(Conduit):
             for i in range(len(r)):
                 out.extend([i, r[i]])
             self.s_model.set(*out)
+
+    def ins_stud(self, data, tab_name):
+        
+        conn = self.open_base()
+        cur = conn.cursor()
+            
+        cur.execute("INSERT INTO students (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
+        conn.commit()
+        cur.close()
+
+        print 'Inserted: ' + ', '.join(data) + ' into base'
+
 
 class Popup:
     def __init__(self, text=None):
