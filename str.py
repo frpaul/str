@@ -56,6 +56,7 @@ class Conduit:
 
         self.new_gr = False # There is a new grade in Details (not in temp_grades yet)
         self.new_ev = False # There is a new event in Events (not in the base yet)
+        self.new_st = False # No new students yet
 
         # get years and current semester
         self.year_ls = self.get_years() # (year1, year2, semester)
@@ -1004,8 +1005,10 @@ class Conduit:
     def make_new_st(self, model):            
         # Make new student in Stud_info
 
+        self.new_st = True
+
         mc = model.get_n_columns()
-        new_iter = model.append([0, '', '', '-', '-', '1', '', ''])
+        new_iter = model.append([0, '', '', '-', '-', '1', ''])
 
         new_path = model.get_path(new_iter)[0]
 
@@ -1298,23 +1301,28 @@ class Conduit:
 
     def edit_stud(self, cell, path, new_text, col):
         ''' callback for Stud_info '''
+
+        self.s_model[path][col] = new_text # вставили новую информацию в TView
+
+
 #        students (s_num INTEGER PRIMARY KEY, s_name TEXT, email TEXT, phone TEXT, photo TEXT, active TEXT, comment TEXT)"
-        if self.rem_confirm('Save info?'):
+#        print 'wwwwow!', path, 'text:', new_text, 'col', col
+        
+#        if self.rem_confirm('Save info?'):
 
-            if self.new_ev:
-                self.s_model[path][col] = new_text # вставили новую информацию в TView
+#        col_ls = ['s_num', 's_name', 'email', 'phone', 'photo', 'active', 'comment']
+#        s_num = str(int(path) + 1)
 
-                col_ls = ['s_num', 's_name', 'email', 'phone', 'photo', 'active', 'comment']
-                s_num = str(int(path) + 1)
+#        if self.new_st:
 
-                command = "INSERT INTO students (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
-                
-            else:
-                command = 'update students set ' + col_ls[col] + '="' + new_text + '" where s_num="' + s_num + '"'
-                self.exec_sql(command)
-
-        # TODO: перечитать TV в Vewer short view
-            self.reload_sh()
+#                command = "INSERT INTO students (s_name, email, phone, photo, active, comment) VALUES (?,?,?,?,?,?);", data)
+#                
+#        else:
+#            command = 'update students set ' + col_ls[col] + '="' + new_text + '" where s_num="' + s_num + #'"'
+#            self.exec_sql(command)
+#
+#        # TODO: перечитать TV в Vewer short view
+#            self.reload_sh()
 
     def edit_grade(self, cell, path, new_text, s_num, col):
         ''' callback for Details - editing grade column '''
@@ -1422,6 +1430,10 @@ class Conduit:
             model = self.tv.get_model()
             # make a new entry (mark is empty - default event)
             self.make_new_st(model)
+        elif (keyname == "s" or keyname == "Cyrillic_yeru") and event.state & gtk.gdk.CONTROL_MASK: 
+            model = self.tv.get_model()
+            self.save_stud(model)
+            self.new_st = False
 
     def event_n(self, widget, event):
         ''' Callback for Events() when key is pressed '''
@@ -1525,6 +1537,27 @@ class Conduit:
                 break
 
         print 'while cycle ended'
+    
+    def save_stud(self, model):
+        '''Save changes in Stud_info() to base'''
+        vals = []
+        if self.rem_confirm('Save changes in Stud info?'):
+            for n in range(len(model)):
+                vals = model.get(model.get_iter(n), 1, 2, 5)
+
+            print vals
+#command insert
+
+        comm = "insert into students (s_name, email, phone, photo, active, comment) values (?,?,?,?,?,?);"
+        
+#        cmt = cmt.decode('utf-8')
+        name = vals[0].decode('utf-8')
+        email = vals[1].decode('utf-8')
+
+        data = (name, email, u'-', u'-', str(vals[2]), '')
+#        print data
+
+        self.exec_sql(comm, data)
 
     def save_events(self, model):
         '''Save changes in Events() to base'''
@@ -2645,8 +2678,8 @@ class Stud_info(Conduit):
         self.tv = gtk.TreeView(self.s_model)
         self.selection = self.tv.get_selection()
 
-        self.modelfilter = self.s_model.filter_new()
-        self.tv.set_model(self.modelfilter)
+#        self.modelfilter = self.s_model.filter_new()
+#        self.tv.set_model(self.modelfilter)
 
         sw.add(self.tv)
 
@@ -2717,7 +2750,19 @@ class Stud_info(Conduit):
         self.get_stud_info()
 
         window2.connect('key_press_event', self.stud_n) # Ctrl+n, s
-        self.tv.connect('row-activated', self.event_set, g_path) # выбираем ряд для вставки в Details
+        self.tv.connect('row-activated', self.stud_set) # выбираем ряд для вставки в Details
+
+    def stud_set(self, path, column, new_text):
+        '''Callback for Assignments, when row is edited'''
+        print 'wow', path, column, new_text
+
+#        iter_cur = self.t_model.get_iter(path)
+#        self.t_model.set(iter_cur, col, new_text)
+#        # fool proof:
+#        if col == 3: # comment
+#            mk = self.t_model.get_value(iter_cur, 2) # delivered
+#            if not mk:
+#                Popup('mark is not set!')
 
     def get_stud_info(self):
 
